@@ -9,12 +9,16 @@ use { Common } from fx::common
 pub struct Launch(common: Common) {
     common : Common = common
     mode : int = 0
-    mode_met : float = 0.0
+    mode_ut : float = 0.0
 
     countdown : int = 0
 
     launch_height : float = 36.0        // estimated from video footage
     liftoff_done_alt : float = 0.0
+
+    debug_print_ut : float = 0.0
+
+    launch_thrust : float = 0.0
 }
 
 impl Launch {
@@ -38,9 +42,12 @@ impl Launch {
 
     sync fn countdown(self) -> bool = {
         const common = self.common
+
+        const t = current_time()
+
         if (self.mode != 1) {
             self.mode = 1
-            self.mode_met = common.met()
+            self.mode_ut = t
             CONSOLE.print_line("start countdown")
         }
 
@@ -57,16 +64,51 @@ impl Launch {
     sync fn liftoff(self) -> bool = {
         const common = self.common
         const vessel = common.vessel
+
+        const t = current_time()
+
+
         if (self.mode != 2) {
             self.mode = 2
-            self.mode_met = common.met()
+            self.mode_ut = t
             self.liftoff_done_alt = vessel.altitude_sealevel + self.launch_height
+            common.t0 = t       // this is the REAL T-0 universal time.
             common.t_mgr.throttle = 1.0
             vessel.autopilot.enabled = true
             vessel.autopilot.mode = MODE_STABILITYASSIST
             CONSOLE.print_line("start liftoff")
         }
+
         vessel.altitude_sealevel < self.liftoff_done_alt
+    }
+
+    sync fn manual(self) -> bool = {
+        const common = self.common
+        const vessel = common.vessel
+
+        const t = current_time()
+
+        if (self.mode != 3) {
+            self.mode = 3
+            self.mode_ut = t
+
+            const body = vessel.main_body
+            const mu = body.grav_parameter
+            const r0 = body.radius + vessel.altitude_sealevel
+            const r2 = r0 * r0
+            const m = vessel.mass
+
+            // have the throttle at 100% while waiting for the
+            // flight engineer to hit the GO button.
+
+            common.t_mgr.throttle = 1.0
+
+            self.launch_thrust = mu * m / r2
+
+            CONSOLE.print_line("awaiting launch")
+        }
+
+        vessel.available_thrust <= self.launch_thrust
     }
 
 }

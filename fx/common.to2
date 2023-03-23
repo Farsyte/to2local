@@ -5,9 +5,10 @@ use { ThrottleManager } from ksp::control
 
 pub struct Common(vessel: Vessel) {
     vessel : Vessel = vessel
-    t0 : float = 0.0
+    t0 : float = current_time() + 3600.0
     launch_azimuth: float = 90.0
     launch_altitude: float = 80000.0
+
 
     t_mgr: ThrottleManager = vessel.manage_throttle(fn(dt) -> 0.0)
     //
