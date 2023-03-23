@@ -1,0 +1,100 @@
+use { CONSOLE } from ksp::console
+use { MODE_AUTOPILOT, MODE_PROGRADE } from ksp::vessel
+use { min, max, sqrt } from core::math
+
+use { Common } from fx::common
+
+pub struct Ascent(common: Common) {
+    common : Common = common
+    mode : int = 0
+    mode_met : float = 0.0
+}
+
+impl Ascent {
+    sync fn pitchover(self) -> bool = {
+        const common = self.common
+        const vessel = common.vessel
+
+        if (self.mode != 2) {
+            self.mode = 2
+            self.mode_met = common.met()
+
+            const pitch = 90.0 - common.pitch_over_angle
+            const heading = common.launch_azimuth
+            const direction = vessel.heading_direction(heading, pitch, 0)
+
+            common.t_mgr.throttle = 1.0
+            vessel.autopilot.enabled = true
+            vessel.autopilot.mode = MODE_AUTOPILOT
+            // vessel.autopilot.lock_direction = direction // does nothing
+            vessel.autopilot.target_orientation = direction.vector
+            CONSOLE.print_line("start pitchover")
+        }
+        common.met() < self.mode_met + 3.0
+    }
+
+    sync fn gravityturn(self) -> bool = {
+        const common = self.common
+        const vessel = common.vessel
+
+        const orbit = vessel.orbit
+        const des_ap = common.launch_altitude
+        const obs_ap = orbit.apoapsis.value
+
+        if (obs_ap > des_ap) {
+            CONSOLE.print_line("gravityturn complete")
+            common.t_mgr.throttle = 0.0
+            vessel.autopilot.enabled = true
+            vessel.autopilot.mode = MODE_PROGRADE
+            return false
+        }
+
+        if (self.mode != 3) {
+            self.mode = 3
+            self.mode_met = common.met()
+
+            common.t_mgr.throttle = 1.0
+            vessel.autopilot.enabled = true
+            vessel.autopilot.mode = MODE_AUTOPILOT
+            CONSOLE.print_line("start gravityturn")
+        }
+
+        const atm_depth = vessel.main_body.atmosphere_depth
+
+        const pitch_max = 90.0 - common.pitch_over_angle
+        const atm_frac = vessel.altitude_sealevel / atm_depth
+        const atm_clip = max(0, min(1, atm_frac))
+        const atm_sqrt = sqrt(atm_clip)
+        const pit_frac = 1.0 - atm_sqrt
+
+        const pitch = pitch_max * pit_frac
+
+        const heading = common.launch_azimuth
+        const direction = vessel.heading_direction(heading, pitch, 0)
+
+        vessel.autopilot.target_orientation = direction.vector
+
+        true
+    }
+
+    sync fn spacecoast(self) -> bool = {
+        const common = self.common
+        const vessel = common.vessel
+
+        if (self.mode != 4) {
+            self.mode = 4
+            self.mode_met = common.met()
+
+            common.t_mgr.throttle = 0.0
+            vessel.autopilot.enabled = true
+            vessel.autopilot.mode = MODE_PROGRADE
+            CONSOLE.print_line("start spacecoast")
+        }
+
+        const atm_depth = vessel.main_body.atmosphere_depth
+        const vessel_alt = vessel.altitude_sealevel
+        vessel_alt <= atm_depth
+    }
+
+
+}

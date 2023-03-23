@@ -1,0 +1,64 @@
+
+// tinker: a place for me to scribble my experiments.
+
+use { Vessel, MODE_RADIALOUT, MODE_STABILITYASSIST } from ksp::vessel
+use { CONSOLE } from ksp::console
+use { vec3 } from ksp::math
+use { sleep, current_time } from ksp::game
+
+use { Common } from fx::common
+use { Launch } from fx::launch
+use { Ascent } from fx::ascent
+use { Stager } from fx::stager
+use { Orbital } from fx::orbital
+
+pub struct TinkerMission(common: Common) {
+    common : Common = common
+    vessel : Vessel = common.vessel
+    stager : Stager = Stager(common)
+    launch : Launch = Launch(common)
+    ascent : Ascent = Ascent(common)
+    orbital : Orbital = Orbital(common)
+}
+
+impl TinkerMission {
+    fn tick(self) -> Unit = {
+
+        // Making a mission-generic tick would require us to work out
+        // how a mission could dynamically add or remove background
+        // tasks, and then there is the whole issue that closures are
+        // SYNC things like vessel.staging.next() calls are ASYNC.
+        //
+        // Maybe admit up-front that the async background tasks, the
+        // ticker, and the main sequence execution loop ahave to be
+        // implemented in each mission, until we can store references
+        // to an async function.
+
+        const stager = self.stager
+        stager.maybe_stage()
+        sleep(0)
+    }
+    fn sync_phase_loop(self, phase: fn() -> bool) -> Unit = {
+        while (phase())
+            self.tick()
+    }
+}
+
+pub fn main_flight( vessel: Vessel, target_apoapsis: float = 80000.0, heading: float = 90.0 ) -> Result<Unit, string> = {
+    CONSOLE.clear()
+    CONSOLE.print_line("Hello from Vessel: " + vessel.name)
+
+    const mission = TinkerMission(Common(vessel))
+
+    // TODO turn mission.launch.pick_t0() into a phase step function.
+    const t0 = mission.launch.pick_t0()
+    mission.common.set_t0(t0)
+
+    mission.sync_phase_loop(fn () -> mission.launch.countdown())
+    mission.sync_phase_loop(fn () -> mission.launch.liftoff())
+    mission.sync_phase_loop(fn () -> mission.ascent.pitchover())
+    mission.sync_phase_loop(fn () -> mission.ascent.gravityturn())
+    mission.sync_phase_loop(fn () -> mission.ascent.spacecoast())
+    mission.sync_phase_loop(fn () -> mission.orbital.circ_ap())
+    mission.sync_phase_loop(fn () -> true)
+}

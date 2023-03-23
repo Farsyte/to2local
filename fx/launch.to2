@@ -1,0 +1,40 @@
+use { CONSOLE } from ksp::console
+use { current_time } from ksp::game
+use { MODE_STABILITYASSIST } from ksp::vessel
+
+use { Common } from fx::common
+
+pub struct Launch(common: Common) {
+    common : Common = common
+    mode : int = 0
+    mode_met : float = 0.0
+}
+impl Launch {
+    sync fn pick_t0(self) -> float = {
+        current_time() + 3.0
+    }
+
+    sync fn countdown(self) -> bool = {
+        const common = self.common
+        if (self.mode != 1) {
+            self.mode = 1
+            self.mode_met = common.met()
+            CONSOLE.print_line("start countdown")
+        }
+        current_time() < common.t0
+    }
+
+    sync fn liftoff(self) -> bool = {
+        const common = self.common
+        const vessel = common.vessel
+        if (self.mode != 2) {
+            self.mode = 2
+            self.mode_met = common.met()
+            common.t_mgr.throttle = 1.0
+            vessel.autopilot.enabled = true
+            vessel.autopilot.mode = MODE_STABILITYASSIST
+            CONSOLE.print_line("start liftoff")
+        }
+        common.met() < 5.0
+    }
+}

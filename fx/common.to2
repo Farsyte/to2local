@@ -1,0 +1,35 @@
+use { CONSOLE } from ksp::console
+use { Vessel } from ksp::vessel
+use { current_time } from ksp::game
+use { ThrottleManager } from ksp::control
+
+pub struct Common(vessel: Vessel) {
+    vessel : Vessel = vessel
+    t0 : float = 0.0
+    pitch_over_angle: float = 5.0
+    launch_azimuth: float = 90.0
+    launch_altitude: float = 80000.0
+
+    t_mgr: ThrottleManager = vessel.manage_throttle(fn(dt) -> 0.0)
+    //
+    // ThrottleManager allows us to specify a throttle setting from 0 to 1,
+    // were 0 is all engines cut and 1 is all engines full.
+    //
+    // things we can do with t_mgr:
+    //
+    //   t_mgr.throttle = 0
+    //   let curr = t_mgr.throttle
+    //
+    //   t_mgr.set_throttle_provider(fn (float) -> float)
+    //   t_mgr.release()
+    //   t_mgr.resume()
+}
+
+impl Common {
+    sync fn set_t0(self, t0: float) -> Unit = {
+        self.t0 = t0
+    }
+    sync fn met(self) -> float = {
+        current_time() - self.t0
+    }
+}

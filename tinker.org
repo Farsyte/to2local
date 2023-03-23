@@ -1,0 +1,110 @@
+Current Behavior of tinker.to2
+
+My intention is to commit updates to this document alongside changes
+to the tinker script, capturing the current status of the experiment.
+
+* Status
+
+** 2023-03-23 noon-ish
+
+Long entry as this is capturing everything done so far, which was
+not actually stashed away in a Git repo.
+
+Files:
+
+| tinker.to2     | mission script                            |
+| fx/common.to2  | shared state and related methods          |
+| fx/stager.to2  | maybe_stage, stage_needed, count_flameout |
+| fx/launch.to2  | pick_t0, countdown, liftoff               |
+| fx/ascent.to2  | pitchover, gravityturn, spacecoast        |
+| fx/orbital.to2 | circ_ap                                   |
+
+*** Goals
+
+The long term aim is to set up a framework that can execute a generic
+mission sequence. This motivates making all of the actual work for
+each phase happen inside "phase" methods that run in a short time, and
+when called repeatedly, provide control for a specific phase of the
+mission such as "launch" or "gravityturn" while keeping these phase
+methods ignorant about housekeeping tasks like staging.
+
+*** Current Status
+
+**** Mission Plan
+
+- pick_t0
+- countdown
+- liftoff
+- pitchover
+- gravityturn
+- spacecoast
+- circ_ap
+
+**** Configurations Tested
+
+- Kerbal K1
+- Kerbal K2
+- Asper 7
+
+**** Overall Results
+
+- OBS can't encode 3440x1440 @ 60 Hz.
+
+- pitchover and gravity turn are smooth enough
+- angle of attack is within acceptable bounds
+- control is maintained across the whole mission
+- final AP-PE is under 100 meters
+- staging handles asparagus configuration
+
+- K1 rated at ΔV=5,047 delivers ΔV=1,718 to orbit.
+- K2 rated at ΔV=6,169 delivers ΔV=2,705 to orbit.
+- A7 rated at ΔV=4,949 delivers ΔV=3,129 to orbit.
+  Note: KSP-2 does not handle Asparagus configurations correctly.
+
+**** Rough Edges
+
+- tinker does the launch. allow flight engineer to do it!
+
+- pitchover to grav turn is abrupt
+- angle of attack always several degrees negative
+- throttle is always maximum.
+- could update steering target orientation more often
+- moderate "maneuver chasing" in K1 and K2 at the end of circularization
+- crazy tumbling in my A7 configuration (it probably needs RCS)
+
+- speaking of which, the script needs to enable RCS.
+
+*** Challenges Identified
+
+Unable yet to construct a scheduler list, where I can add new items to
+the list that have a scheduled time, and can consume the item with the
+lowest scheduled time.
+
+Unable to store a reference to an ASYNC function. I can store and pass
+around `fn () -> float` items but these are SYNC so there are things
+they can not do, like trigger staging.
+
+The perfect structure for this is either a sorted list with the
+ability to atomically insert items, or a priority heap; note that the
+number of insertions is equal to the number of removals for
+optimization considerations, but also bear in mind that the number of
+items in the scheduled task pool will be small.
+
+Have not tested TIMEWARP. Apparently if you activate time warp, the
+SAS.CONTROL mode is not maintained, so phase step handlers that want
+to tolerate timewarp may need to include logic to adjust timewarp and
+restore the autopilot settings.
+
+The vessel has no state storage. If we switch vessels, whatever script
+we run on the new vessel starts from scratch. This means no single
+grand script for a whole lifetime of a vessel, which knows the state
+of the mission and picks up at the right step. Instead, the flight
+engineer needs to interact with the system to provide that state.
+
+I'm good with keeping focus on a mission until it reaches a specific
+transition where it goes from one mission sequence to another, and
+have separate scripts. For example, a script to launch a satellite
+with a separate script for stationkeeping, or a script to launch an
+interplanetary mission, a separate script to manage the transfer, and
+a separate script for approaching the target.
+
