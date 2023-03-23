@@ -1,3 +1,5 @@
+use { ceiling } from core::math
+
 use { CONSOLE } from ksp::console
 use { current_time } from ksp::game
 use { MODE_STABILITYASSIST } from ksp::vessel
@@ -8,7 +10,10 @@ pub struct Launch(common: Common) {
     common : Common = common
     mode : int = 0
     mode_met : float = 0.0
+
+    countdown : int = 0
 }
+
 impl Launch {
 
     sync fn launchtime(self) -> bool = {
@@ -23,7 +28,7 @@ impl Launch {
         //
         // Absent any constraints, launch in 3 seconds.
 
-        common.t0 = current_time() + 3.0
+        common.t0 = current_time() + 10.0
 
         false
     }
@@ -35,7 +40,15 @@ impl Launch {
             self.mode_met = common.met()
             CONSOLE.print_line("start countdown")
         }
-        current_time() < common.t0
+
+        const dt = common.t0 - current_time()
+        const countdown = ceiling(dt).to_int
+        if (self.countdown != countdown) {
+            self.countdown = countdown
+            if (0 < countdown && countdown < 11)
+                CONSOLE.print_line("countdown: T-" + countdown.to_string())
+        }
+        dt > 0
     }
 
     sync fn liftoff(self) -> bool = {
@@ -51,4 +64,5 @@ impl Launch {
         }
         common.met() < 5.0
     }
+
 }
