@@ -12,6 +12,9 @@ pub struct Launch(common: Common) {
     mode_met : float = 0.0
 
     countdown : int = 0
+
+    launch_height : float = 36.0        // estimated from video footage
+    liftoff_done_alt : float = 0.0
 }
 
 impl Launch {
@@ -57,12 +60,13 @@ impl Launch {
         if (self.mode != 2) {
             self.mode = 2
             self.mode_met = common.met()
+            self.liftoff_done_alt = vessel.altitude_sealevel + self.launch_height
             common.t_mgr.throttle = 1.0
             vessel.autopilot.enabled = true
             vessel.autopilot.mode = MODE_STABILITYASSIST
             CONSOLE.print_line("start liftoff")
         }
-        common.met() < 5.0
+        vessel.altitude_sealevel < self.liftoff_done_alt
     }
 
 }
