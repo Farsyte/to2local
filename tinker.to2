@@ -53,7 +53,6 @@ pub fn main_flight( vessel: Vessel, target_apoapsis: float = 80000.0, heading: f
     mission.sync_phase_loop(fn () -> mission.launch.launchtime())
     mission.sync_phase_loop(fn () -> mission.launch.countdown())
     mission.sync_phase_loop(fn () -> mission.launch.liftoff())
-    mission.sync_phase_loop(fn () -> mission.ascent.pitchover())
     mission.sync_phase_loop(fn () -> mission.ascent.gravityturn())
     mission.sync_phase_loop(fn () -> mission.ascent.spacecoast())
     mission.sync_phase_loop(fn () -> mission.orbital.circ_ap())

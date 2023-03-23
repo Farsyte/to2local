@@ -11,27 +11,6 @@ pub struct Ascent(common: Common) {
 }
 
 impl Ascent {
-    sync fn pitchover(self) -> bool = {
-        const common = self.common
-        const vessel = common.vessel
-
-        if (self.mode != 2) {
-            self.mode = 2
-            self.mode_met = common.met()
-
-            const pitch = 90.0 - common.pitch_over_angle
-            const heading = common.launch_azimuth
-            const direction = vessel.heading_direction(heading, pitch, 0)
-
-            common.t_mgr.throttle = 1.0
-            vessel.autopilot.enabled = true
-            vessel.autopilot.mode = MODE_AUTOPILOT
-            // vessel.autopilot.lock_direction = direction // does nothing
-            vessel.autopilot.target_orientation = direction.vector
-            CONSOLE.print_line("start pitchover")
-        }
-        common.met() < self.mode_met + 3.0
-    }
 
     sync fn gravityturn(self) -> bool = {
         const common = self.common
@@ -95,6 +74,5 @@ impl Ascent {
         const vessel_alt = vessel.altitude_sealevel
         vessel_alt <= atm_depth
     }
-
 
 }
