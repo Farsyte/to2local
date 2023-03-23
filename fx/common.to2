@@ -6,7 +6,6 @@ use { ThrottleManager } from ksp::control
 pub struct Common(vessel: Vessel) {
     vessel : Vessel = vessel
     t0 : float = 0.0
-    pitch_over_angle: float = 5.0
     launch_azimuth: float = 90.0
     launch_altitude: float = 80000.0
 

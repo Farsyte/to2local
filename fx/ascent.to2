@@ -8,6 +8,9 @@ pub struct Ascent(common: Common) {
     common : Common = common
     mode : int = 0
     mode_met : float = 0.0
+
+    alt_min : float = 0.0
+    alt_max : float = 70000.0
 }
 
 impl Ascent {
@@ -15,8 +18,8 @@ impl Ascent {
     sync fn gravityturn(self) -> bool = {
         const common = self.common
         const vessel = common.vessel
-
         const orbit = vessel.orbit
+
         const des_ap = common.launch_altitude
         const obs_ap = orbit.apoapsis.value
 
@@ -32,21 +35,21 @@ impl Ascent {
             self.mode = 3
             self.mode_met = common.met()
 
+            self.alt_min = vessel.altitude_sealevel
+            self.alt_max = max(vessel.main_body.atmosphere_depth, self.alt_min + 1000)
+
             common.t_mgr.throttle = 1.0
             vessel.autopilot.enabled = true
             vessel.autopilot.mode = MODE_AUTOPILOT
             CONSOLE.print_line("start gravityturn")
         }
 
-        const atm_depth = vessel.main_body.atmosphere_depth
-
-        const pitch_max = 90.0 - common.pitch_over_angle
-        const atm_frac = vessel.altitude_sealevel / atm_depth
+        const atm_frac = (vessel.altitude_sealevel - self.alt_min) / (self.alt_max - self.alt_min)
         const atm_clip = max(0, min(1, atm_frac))
         const atm_sqrt = sqrt(atm_clip)
         const pit_frac = 1.0 - atm_sqrt
 
-        const pitch = pitch_max * pit_frac
+        const pitch = 90.0 * pit_frac
 
         const heading = common.launch_azimuth
         const direction = vessel.heading_direction(heading, pitch, 0)
