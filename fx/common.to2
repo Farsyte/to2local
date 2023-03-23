@@ -26,9 +26,6 @@ pub struct Common(vessel: Vessel) {
 }
 
 impl Common {
-    sync fn set_t0(self, t0: float) -> Unit = {
-        self.t0 = t0
-    }
     sync fn met(self) -> float = {
         current_time() - self.t0
     }

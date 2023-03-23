@@ -50,10 +50,7 @@ pub fn main_flight( vessel: Vessel, target_apoapsis: float = 80000.0, heading: f
 
     const mission = TinkerMission(Common(vessel))
 
-    // TODO turn mission.launch.pick_t0() into a phase step function.
-    const t0 = mission.launch.pick_t0()
-    mission.common.set_t0(t0)
-
+    mission.sync_phase_loop(fn () -> mission.launch.launchtime())
     mission.sync_phase_loop(fn () -> mission.launch.countdown())
     mission.sync_phase_loop(fn () -> mission.launch.liftoff())
     mission.sync_phase_loop(fn () -> mission.ascent.pitchover())

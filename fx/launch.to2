@@ -10,8 +10,22 @@ pub struct Launch(common: Common) {
     mode_met : float = 0.0
 }
 impl Launch {
-    sync fn pick_t0(self) -> float = {
-        current_time() + 3.0
+
+    sync fn launchtime(self) -> bool = {
+        const common = self.common
+
+        // Open for expansion:
+        //
+        // When initating support for missions that constrain the
+        // launch window (such as waiting until we are within the
+        // orbital plane of a destination), add code here to examine
+        // data in common to guide selection of launch time.
+        //
+        // Absent any constraints, launch in 3 seconds.
+
+        common.t0 = current_time() + 3.0
+
+        false
     }
 
     sync fn countdown(self) -> bool = {
