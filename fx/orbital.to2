@@ -13,8 +13,8 @@ pub struct Orbital(common: Common) {
     common : Common = common
     mode : int = 0
     // mode 0: nothing happening
-    // mode 1: planning circ_ap burn
-    // mode 2: executing circ_ap burn
+    // mode 1: planned circ_ut burn
+    // mode 2: execute circ_ap burn
     mode_met : float = 0.0
 
     chat_met : float = 0.0
@@ -24,71 +24,48 @@ pub struct Orbital(common: Common) {
 }
 
 impl Orbital {
-    sync fn circ_ap(self) -> bool = {
 
+    sync fn circ_dv(self) -> Vec3 = {
         const common = self.common
         const vessel = common.vessel
-        const orbit = vessel.orbit
-        const body = orbit.reference_body
+        const body = vessel.main_body
         const r0 = body.radius
         const mu = body.grav_parameter
 
-        const t = current_time()
+        const radius = r0 + vessel.altitude_sealevel
+        const vcirc = sqrt(mu / radius)
+        const vold = vessel.orbital_velocity
+        const vhat = vessel.up.exclude_from(vold).normalized
+        const vnew = vhat * vcirc
+        const dv = vnew - vold
+
+        dv
+    }
+
+    sync fn circ_ut(self) -> bool = {
+        const common = self.common
+        const vessel = common.vessel
         const met = common.met()
 
-        if ((self.mode != 1) && (self.mode != 2)) {
+        if (self.mode != 1) {
             self.mode = 1
             self.mode_met = met
-            CONSOLE.print_line("Orbital circ_ap: plan the burn")
 
-            // remove any maneuver nodes before starting, as they would
-            // interfere with circ_ap, or circ_ap would interfere with them.
+            CONSOLE.print_line("Orbital circ_ut")
 
-            for (node in vessel.maneuver.nodes) {
-                node.remove()
-            }
-
-            // create a maneuver at the apoapsis that puts us into a circular
-            // orbit, but just use this to set up the starting time, as circ_ap
-            // will use an error controller to "correct" our velocity to the
-            // circular orbit velocity.
-
-            const t_ap = orbit.next_apoapsis_time(t + 30).value
-            const r_ap = r0 + orbit.apoapsis.value
-            const v_ap = orbit.orbital_velocity(t_ap)
-            const v_c = sqrt(mu / r_ap)
-            const dv = v_ap.normalized * v_c - v_ap
-
-            const n = vessel.maneuver.add_burn_vector(t_ap, dv).value
-            const dt = n.burn_duration
-            self.burn_ut = t_ap - dt / 2
-
-            common.t_mgr.throttle = 0.0
-            vessel.autopilot.enabled = true
-            vessel.autopilot.mode = MODE_PROGRADE
-        }
-
-        if (self.burn_ut > t) {
-            return true
-        }
-
-        if (self.mode != 2) {
-            self.mode = 2
-            self.mode_met = met
-            CONSOLE.print_line("Orbital circ_ap: start the burn")
+            self.burn_dv = self.circ_dv()
             vessel.autopilot.mode = MODE_AUTOPILOT
+            vessel.autopilot.target_orientation = vessel.facing.vector
+            vessel.autopilot.target_orientation = self.burn_dv
 
             common.t_mgr.set_throttle_provider(fn (dt) -> {
-                const radius = r0 + vessel.altitude_sealevel
-                const vcirc = sqrt(mu / radius)
-                const vold = vessel.orbital_velocity
-                const vhat = vessel.up.exclude_from(vold).normalized
-                const vnew = vhat * vcirc
-                const dv = vnew - vold
+                const dv = self.circ_dv()
 
                 self.burn_dv = dv
 
                 vessel.autopilot.target_orientation = dv
+
+                if (current_time() < self.burn_ut) return 0.0
 
                 const max_th = max(1.0, vessel.available_thrust)
                 const cmd_th = dv.magnitude * vessel.mass / max_th
@@ -99,26 +76,36 @@ impl Orbital {
 
                 afrac * lim_th
             })
-
-        } else {
-
-            // if this runs immediately after setting the manager,
-            // it will see an old burn_dv.
-
-            if (self.burn_dv.magnitude < 0.1) {
-                CONSOLE.print_line("Orbital circ_ap: complete")
-                common.t_mgr.throttle = 0.0
-                vessel.autopilot.enabled = true
-                vessel.autopilot.mode = MODE_PROGRADE
-
-                for (node in vessel.maneuver.nodes) {
-                    node.remove()
-                }
-
-                return false
-            }
         }
 
-        true
+        if (self.burn_dv.magnitude > 0.1) {
+            return true
+        }
+
+        common.t_mgr.throttle = 0.0
+        vessel.autopilot.enabled = true
+        vessel.autopilot.mode = MODE_PROGRADE
+
+        false
+    }
+
+    sync fn circ_ap(self) -> bool = {
+
+        if ((self.mode != 1) && (self.mode != 2)) {
+            const common = self.common
+            const vessel = common.vessel
+            const orbit = vessel.orbit
+            const t = current_time()
+            const met = common.met()
+
+            self.mode = 2
+            self.mode_met = met
+
+            CONSOLE.print_line("Orbital circ_ap")
+
+            self.burn_ut = orbit.next_apoapsis_time(t + 30).value
+        }
+
+        self.circ_ut()
     }
 }
