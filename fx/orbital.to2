@@ -55,7 +55,6 @@ impl Orbital {
 
             self.burn_dv = self.circ_dv()
             vessel.autopilot.mode = MODE_AUTOPILOT
-            vessel.autopilot.target_orientation = vessel.facing.vector
             vessel.autopilot.target_orientation = self.burn_dv
 
             common.t_mgr.set_throttle_provider(fn (dt) -> {
@@ -104,6 +103,9 @@ impl Orbital {
             CONSOLE.print_line("Orbital circ_ap")
 
             self.burn_ut = orbit.next_apoapsis_time(t + 30).value
+
+            // TODO if we would get to periapsis before apoapsis,
+            // then DO IT NOW.
         }
 
         self.circ_ut()

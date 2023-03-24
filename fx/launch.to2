@@ -58,6 +58,7 @@ impl Launch {
             if (0 < countdown && countdown < 11)
                 CONSOLE.print_line("countdown: T-" + countdown.to_string())
         }
+
         dt > 0
     }
 
