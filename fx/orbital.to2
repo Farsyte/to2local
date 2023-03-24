@@ -77,7 +77,7 @@ impl Orbital {
             })
         }
 
-        if (self.burn_dv.magnitude > 0.1) {
+        if (self.burn_dv.magnitude > 0.01) {
             return true
         }
 
