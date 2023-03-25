@@ -33,24 +33,13 @@ impl TinkerMission {
     fn run(self) -> Unit = {
         while (self.seq.step()) {
 
-            // as long as we can't cart around references
-            // to ASYNC functions, we actually have to have
-            // a direct call linkage from here down to whatever
-            // code actually calls vessel.staging.next()
+            // As of KontrolSystem 0.2.2, I see no way to
+            // provide indirect execution of ASYNC methods,
+            // so the call chain from the main sequencer loop
+            // down to vessel.staging.next() has to be just
+            // normal explicit calls.
             //
-            // we can't do it from within a phase step function
-            // that gets packaged via a lambda for storage in
-            // the sequencer.
-            //
-            // we can't leverage background tasks, as again that
-            // uses a lambda to package the function that will
-            // run in the background. Maybe I missed something,
-            // because it would be sufficient to have a task
-            // hanging out in the background that we notify
-            // via a Cell<bool> that we need it to stage.
-            //
-            // So, we end up ... having to wire down the all
-            // to the auto stager inside the loop. ARGH.
+            // See issue #20 in Farsyte/to2local for my plans.
 
             self.stager.maybe_stage()       // staging is ASYNC
             yield()

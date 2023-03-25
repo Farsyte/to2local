@@ -1,0 +1,155 @@
+// S1: scheduler experient one
+
+use { round } from core::math
+
+use { yield, sleep, current_time } from ksp::game
+use { Vessel } from ksp::vessel
+use { CONSOLE } from ksp::console
+
+use { Common } from fx::common
+
+struct S1state(common: Common) {
+    common : Common = common
+    vessel : Vessel = common.vessel
+}
+
+sync fn fwd_sync(s1state: S1state, dt: float) -> float = {
+    CONSOLE.print_line("fwd_sync")
+    s1state.s1_sync(dt)
+}
+
+fn fwd_async(s1state: S1state, dt: float) -> float = {
+    CONSOLE.print_line("fwd_async")
+    s1state.s1_async(dt)
+}
+
+impl S1state {
+
+    sync fn s1_sync(self, dt: float) -> float = {
+        // This is the common form for the functions that are used
+        // to implement mission sequencing and background tasks:
+        // start up, observe, compute, store results, done.
+        // currently, we can successfully do indirect calls
+        // but only to synchronous functions.
+        //
+        CONSOLE.print_line("s1state.s1_sync")
+        round(200.0 * dt) / 100.0
+    }
+
+    fn s1_async(self, dt: float) -> float = {
+        // This is the less common form the functions that are used
+        // to implement mission sequencing and background tasks:
+        // as above, but also make calls like vessel.staging.next()
+        // that are ASYNC, forcing this method to be async.
+        //
+        // currently I have found no way to set up an indirect calling
+        // mechanism that stores and calls through references to ASYNC
+        // functions.
+        //
+        CONSOLE.print_line("s1state.s1_async")
+        if (dt < 0) self.vessel.staging.next()
+        round(200.0 * dt) / 100.0
+    }
+
+    fn run_it_with_s1(self, dt: float, task: fn(S1state, float) -> float) -> float = {
+        CONSOLE.print_line("s1state.run_it_with_s1")
+        let result = task(self, dt)
+        CONSOLE.print_line("s1state.run_it_with_s1 result is " + result.to_string())
+        return result
+    }
+    fn run_it_without_s1(self, dt: float, task: fn(float) -> float) -> float = {
+        CONSOLE.print_line("s1state.run_it_without_s1")
+        let result = task(dt)
+        CONSOLE.print_line("s1state.run_it_without_s1 result is " + result.to_string())
+        return result
+    }
+    fn run(self) -> float = {
+
+        let dt = 0.17
+
+        CONSOLE.print_line("")
+        CONSOLE.print_line("s1state.run call 1")
+        // reference code, works. canary test in case I break someting fundamental.
+        dt = self.run_it_with_s1(dt, fn(s, dt) -> s.s1_sync(dt))
+        CONSOLE.print_line("s1state.run call 1 returned " + dt.to_string() + " to run")
+
+        CONSOLE.print_line("")
+        CONSOLE.print_line("s1state.run call 2")
+        // reference code, works. canary test in case I break someting fundamental.
+        dt = self.run_it_with_s1(dt, fn(s, dt) -> fwd_sync(s, dt))
+        CONSOLE.print_line("s1state.run call 2 returned " + dt.to_string() + " to run")
+
+        CONSOLE.print_line("")
+        CONSOLE.print_line("s1state.run call 3")
+        // I want to pass functions, not lambdas that call functions.
+        // I am very happy to report that this construction WORKS! (tested in 0.2.2)
+        dt = self.run_it_with_s1(dt, fwd_sync)
+        CONSOLE.print_line("s1state.run call 3 returned " + dt.to_string() + " to run")
+
+        CONSOLE.print_line("")
+        CONSOLE.print_line("s1state.run call 3a")
+        // I want to pass ASYNC functions to indirect callers.
+        // This compiles without errors, and does not produce an error when running.
+        // HOWEVER: the call made by run_it_with_s1 does nothing, and the value
+        // returned is just the original dt value.
+        dt = self.run_it_with_s1(dt, fwd_async) // does not run fwd_async in KontrolSystem2 0.2.2
+        CONSOLE.print_line("s1state.run call 3a returned " + dt.to_string() + " to run")
+
+        // CONSOLE.print_line("")
+        // CONSOLE.print_line("s1state.run call 4")
+        // this next line has no compile error or warning,
+        // and produces no error or warning at runtime,
+        // but if we make this call, we do NOT see anything
+        // printed by run_it_with_s1, instead, "run" returns.
+        //
+        // dt = self.run_it_with_s1(dt, s1.s1_sync)
+        // CONSOLE.print_line("s1state.run call 4 returned " + dt.to_string() + " to run")
+
+        // CONSOLE.print_line("")
+        // CONSOLE.print_line("s1state.run call 4a")
+        // this next line has no compile error or warning,
+        // and produces no error or warning at runtime,
+        // but if we make this call, we do NOT see anything
+        // printed by run_it_with_s1, instead, "run" returns.
+        //
+        // dt = self.run_it_with_s1(dt, s1.s1_async)
+        // CONSOLE.print_line("s1state.run call 4a returned " + dt.to_string() + " to run")
+
+        // CONSOLE.print_line("")
+        // CONSOLE.print_line("s1state.run call 5")
+        // this next line has no compile error or warning,
+        // and produces no error or warning at runtime,
+        // but if we make this call, we do NOT see anything
+        // printed by run_it_without_s1, instead, "run" returns.
+        //
+        // dt = self.run_it_without_s1(dt, s1.s1_sync)
+        // CONSOLE.print_line("s1state.run call 5 returned " + dt.to_string() + " to run")
+
+        // CONSOLE.print_line("")
+        // CONSOLE.print_line("s1state.run call 5a")
+        // this next line has no compile error or warning,
+        // and produces no error or warning at runtime,
+        // but if we make this call, we do NOT see anything
+        // printed by run_it_without_s1, instead, "run" returns.
+        //
+        // dt = self.run_it_without_s1(dt, s1.s1_async)
+        // CONSOLE.print_line("s1state.run call 5a returned " + dt.to_string() + " to run")
+
+        CONSOLE.print_line("")
+        CONSOLE.print_line("s1state.run done")
+        dt
+    }
+}
+
+pub fn main_flight( vessel: Vessel) -> Result<Unit, string> = {
+    const common = Common(vessel)
+    const s1state : S1state = S1state(common)
+
+    CONSOLE.clear()
+    CONSOLE.print_line("s1 testing ...")
+    let result = s1state.run()
+    CONSOLE.print_line("")
+    CONSOLE.print_line("s1 testing done, returned " + result.to_string())
+
+    sleep(10.0)
+}
