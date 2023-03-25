@@ -4,7 +4,7 @@
 use { Vessel, MODE_RADIALOUT, MODE_STABILITYASSIST } from ksp::vessel
 use { CONSOLE } from ksp::console
 use { vec3 } from ksp::math
-use { sleep, current_time } from ksp::game
+use { yield, sleep, current_time } from ksp::game
 
 use { Common } from fx::common
 use { Launch } from fx::launch
@@ -12,35 +12,49 @@ use { Ascent } from fx::ascent
 use { Stager } from fx::stager
 use { Orbital } from fx::orbital
 
+use { Sequencer } from fx::sequencer
+
 pub struct TinkerMission(common: Common) {
     common : Common = common
     vessel : Vessel = common.vessel
+
     stager : Stager = Stager(common)
     launch : Launch = Launch(common)
     ascent : Ascent = Ascent(common)
     orbital : Orbital = Orbital(common)
+
+    seq : Sequencer = Sequencer()
 }
 
 impl TinkerMission {
-    fn tick(self) -> Unit = {
-
-        // Making a mission-generic tick would require us to work out
-        // how a mission could dynamically add or remove background
-        // tasks, and then there is the whole issue that closures are
-        // SYNC things like vessel.staging.next() calls are ASYNC.
-        //
-        // Maybe admit up-front that the async background tasks, the
-        // ticker, and the main sequence execution loop ahave to be
-        // implemented in each mission, until we can store references
-        // to an async function.
-
-        const stager = self.stager
-        stager.maybe_stage()
-        sleep(0)
+    fn add(self, task: fn() -> bool) -> Unit = {
+        self.seq.add(task)
     }
-    fn sync_phase_loop(self, phase: fn() -> bool) -> Unit = {
-        while (phase())
-            self.tick()
+    fn run(self) -> Unit = {
+        while (self.seq.step()) {
+
+            // as long as we can't cart around references
+            // to ASYNC functions, we actually have to have
+            // a direct call linkage from here down to whatever
+            // code actually calls vessel.staging.next()
+            //
+            // we can't do it from within a phase step function
+            // that gets packaged via a lambda for storage in
+            // the sequencer.
+            //
+            // we can't leverage background tasks, as again that
+            // uses a lambda to package the function that will
+            // run in the background. Maybe I missed something,
+            // because it would be sufficient to have a task
+            // hanging out in the background that we notify
+            // via a Cell<bool> that we need it to stage.
+            //
+            // So, we end up ... having to wire down the all
+            // to the auto stager inside the loop. ARGH.
+
+            self.stager.maybe_stage()       // staging is ASYNC
+            yield()
+        }
     }
 }
 
@@ -50,13 +64,29 @@ pub fn main_flight( vessel: Vessel, target_apoapsis: float = 80000.0, heading: f
 
     const mission = TinkerMission(Common(vessel))
 
-    //mission.sync_phase_loop(fn () -> mission.launch.launchtime())
-    //mission.sync_phase_loop(fn () -> mission.launch.countdown())
+    // I was hoping that "mission.launch.manual"
+    // was actually of type "fn () -> bool" but alas
+    // it is not.
+    //
+    // Trying to write
+    //    mission.add(mission.launch.manual)
+    // gives us the error
+    //    Type fx::launch::Launch does not have a field 'manual'
+    //
+    // So, basically, I exchanged a one-line call into mission
+    // to repeatedly call a lambda until done, with a one-line
+    // call into mission to stash this on a list.
+    //
+    // Why? Well, in theory, this means I can manipulate the
+    // mission plan after initial construction, possibly even
+    // during execution.
 
-    mission.sync_phase_loop(fn () -> mission.launch.manual())
-    mission.sync_phase_loop(fn () -> mission.launch.liftoff())
-    mission.sync_phase_loop(fn () -> mission.ascent.gravityturn())
-    mission.sync_phase_loop(fn () -> mission.ascent.spacecoast())
-    mission.sync_phase_loop(fn () -> mission.orbital.circ_ap())
-    mission.sync_phase_loop(fn () -> true)
+    mission.add(fn () -> mission.launch.manual())
+    mission.add(fn () -> mission.launch.liftoff())
+    mission.add(fn () -> mission.ascent.gravityturn())
+    mission.add(fn () -> mission.ascent.spacecoast())
+    mission.add(fn () -> mission.orbital.circ_ap())
+
+    mission.run()
+    CONSOLE.print_line("mission plan complete")
 }
