@@ -1,23 +1,56 @@
+use { Vessel } from ksp::vessel
+use { CONSOLE } from ksp::console
 
-
-struct LinkedTask( none: Option<LinkedTask>, name: string, task: fn() -> float) {
-    next: Option<LinkedTask> = none
-    prev: Option<LinkedTask> = none
-    name: string = name
-    task: fn() -> float = task
+pub struct Sequencer() {
+    next: NodeRef = no_node
+    last: NodeRef = no_node
+    step: int = 0
 }
 
-sync fn make_null_task() -> LinkedTask = {
-    let n = LinkedTask(None(), "null", fn() -> 0.0)
-    n.prev = Some(n)
-    n.next = Some(n)
-    n
+type NodeRef = Option<Node>
+
+struct Node(task: fn() -> bool) {
+    next: NodeRef = no_node
+    task: fn() -> bool = task
 }
 
-pub struct Sequencer {
-    ring: LinkedTask = make_null_task()
+// because this initializer was not working:
+//    next: NodeRef = None()
+const no_node : NodeRef = None()
+
+// oddity notes as of KontrolSystem 0.2.1.0
+// if this is not pub, it can not be found by seq.add AT RUNTIME.
+// placing the function body nside impl.step triggers (at compile time)
+// ERROR [(0, 0)] Unknown error // Specified method is not supported.
+pub fn seq_add(seq : Sequencer, task: fn() -> bool) -> Result<Unit, string> = {
+    const nref : NodeRef = Some(Node(task))
+    const last : NodeRef = seq.last
+    if (!seq.next.defined)
+        seq.next = nref
+    if (seq.last.defined)
+        seq.last.value.next = nref
+    seq.last = nref
+}
+
+// oddity notes as of KontrolSystem 0.2.1.0
+// if this is not pub, it can not be found by seq.step AT RUNTIME.
+// placing the function body nside impl.step triggers (at compile time)
+// ERROR [(0, 0)] Unknown error // Specified method is not supported.
+pub fn seq_step(seq : Sequencer) -> bool = {
+    if (seq.next.defined) {
+        const n = seq.next.value
+        if (!n.task()) {
+            seq.next = n.next
+        }
+    }
+    seq.next.defined
 }
 
 impl Sequencer {
-
+    fn add(self, task: fn() -> bool) -> Unit = {
+        seq_add(self, task)
+    }
+    fn step(self) -> bool = {
+        seq_step(self)
+    }
 }
