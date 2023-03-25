@@ -12,6 +12,8 @@ use { Ascent } from fx::ascent
 use { Stager } from fx::stager
 use { Orbital } from fx::orbital
 
+use { Sequencer } from fx::sequencer
+
 pub struct TinkerMission(common: Common) {
     common : Common = common
     vessel : Vessel = common.vessel

@@ -1,0 +1,23 @@
+
+
+struct LinkedTask( none: Option<LinkedTask>, name: string, task: fn() -> float) {
+    next: Option<LinkedTask> = none
+    prev: Option<LinkedTask> = none
+    name: string = name
+    task: fn() -> float = task
+}
+
+sync fn make_null_task() -> LinkedTask = {
+    let n = LinkedTask(None(), "null", fn() -> 0.0)
+    n.prev = Some(n)
+    n.next = Some(n)
+    n
+}
+
+pub struct Sequencer {
+    ring: LinkedTask = make_null_task()
+}
+
+impl Sequencer {
+
+}
