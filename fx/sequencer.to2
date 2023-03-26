@@ -1,11 +1,15 @@
 use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
 
+use { Scheduler } from fx::scheduler
+
 pub type float = float
 
 pub type SeqTask = fn() -> float
 
-pub struct Sequencer() {
+pub struct Sequencer(vessel: Vessel) {
+    scheduler: Scheduler = Scheduler(vessel)
+
     next: NodeRef = no_node
     last: NodeRef = no_node
     step: int = 0

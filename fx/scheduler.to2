@@ -9,7 +9,9 @@ type SchTaskFunc = fn() -> float
 
 type SchTaskRef = Option<SchTask>
 
-pub struct Scheduler {
+pub struct Scheduler(vessel: Vessel) {
+    vessel : Vessel = vessel
+
     next : SchTaskRef = make_last_sch_task()
     name : string = ""
 }

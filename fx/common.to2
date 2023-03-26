@@ -3,8 +3,12 @@ use { Vessel } from ksp::vessel
 use { current_time } from ksp::game
 use { ThrottleManager } from ksp::control
 
+use { Sequencer } from fx::sequencer
+
 pub struct Common(vessel: Vessel) {
     vessel : Vessel = vessel
+    sequencer : Sequencer = Sequencer(vessel)
+
     t0 : float = current_time() + 3600.0
     launch_azimuth: float = 90.0
     launch_altitude: float = 80000.0
