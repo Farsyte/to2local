@@ -1,0 +1,138 @@
+
+// BIST: Built-In Self Test support module
+
+use { CONSOLE } from ksp::console
+use { Vessel } from ksp::vessel
+use { current_time } from ksp::game
+
+use { Log } from fx::log
+
+pub type BistResult = Result<string, string>
+
+pub struct Bist() {
+    fail_count : int = 0
+    test_count : int = 0
+    log_lines : int = 0
+    log : Log = Log()
+}
+
+impl Bist {
+
+    sync fn assert_true(self, name : string, observed : bool) -> BistResult = {
+        if (observed != true) {
+            self.add_fail_head(name, "condition is not TRUE")
+                .add_fail_tail(name)
+        } else {
+            self.pass(name)
+        }
+    }
+
+    sync fn assert_false(self, name : string, observed : bool) -> BistResult = {
+        if (observed != false) {
+            self.add_fail_head(name, "condition is not TRUE")
+                .add_fail_tail(name)
+        } else {
+            self.pass(name)
+        }
+    }
+
+    sync fn assert_float(self, name: string, lo: float, hi: float, observed: float) -> BistResult = {
+        if (observed != observed) {
+            self.add_fail_head(name, "value is NaN")
+                .add("lo bound: " + lo.to_string())
+                .add("hi bound: " + lo.to_string())
+                .add("observed: " + observed.to_string())
+                .add_fail_tail(name)
+        } else if (observed < lo) {
+            self.add_fail_head(name, "value is below allowed range")
+                .add("lo bound: " + lo.to_string())
+                .add("observed: " + observed.to_string())
+                .add("difference: " + (lo - observed).to_string())
+                .add_fail_tail(name)
+        } else if (observed > hi) {
+            self.add_fail_head(name, "value is above allowed range")
+                .add("hi bound: " + lo.to_string())
+                .add("observed: " + observed.to_string())
+                .add("difference: " + (observed - hi).to_string())
+                .add_fail_tail(name)
+        } else {
+            self.pass(name)
+        }
+    }
+
+    sync fn assert_int(self, name: string, lo: int, hi: int, observed: int) -> BistResult = {
+        if (observed < lo) {
+            self.add_fail_head(name, "value is below allowed range")
+                .add("lo bound: " + lo.to_string())
+                .add("observed: " + observed.to_string())
+                .add("difference: " + (lo - observed).to_string())
+                .add_fail_tail(name)
+        } else if (observed > hi) {
+            self.add_fail_head(name, "value is above allowed range")
+                .add("hi bound: " + lo.to_string())
+                .add("observed: " + observed.to_string())
+                .add("difference: " + (observed - hi).to_string())
+                .add_fail_tail(name)
+        } else {
+            self.pass(name)
+        }
+    }
+
+    sync fn clear(self) -> Bist = {
+        self.test_count = 0
+        self.fail_count = 0
+        self.log_lines = 0
+        self.log.clear()
+        self
+    }
+
+    sync fn empty(self) -> bool = {
+        self.log.empty()
+    }
+
+    sync fn pop(self) -> Option<string> = {
+        self.log_lines -= 1
+        self.log.pop()
+    }
+
+    sync fn add(self, text: string) -> Bist = {
+        self.log_lines += 1
+        self.log.add(text)
+        self
+    }
+
+    fn print(self) -> Bist = {
+        self.log.print()
+        self
+    }
+
+    sync fn summary(self, name : string) -> BistResult = {
+        const nc : string = name + " completed "
+        const fc : string = self.fail_count.to_string() + " FAIL results"
+        const tc : string = self.test_count.to_string() + " test cases"
+        if (self.fail_count > 0) {
+            Err(nc + tc + " with " + fc)
+        } else {
+            Ok(nc + tc)
+        }
+    }
+
+    sync fn add_fail_head(self, name: string, text: string) -> Bist = {
+        self.test_count += 1
+        self.fail_count += 1
+        self.log_lines += 2
+        self.add("FAIL: " + name)
+            .add(text)
+    }
+
+    sync fn add_fail_tail(self, name: string) -> BistResult = {
+        Err(name)
+    }
+
+    sync fn pass(self, name: string) -> BistResult = {
+        self.test_count += 1
+        self.log_lines += 1
+        self.add("PASS: " + name)
+        Ok(name)
+    }
+}

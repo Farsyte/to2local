@@ -1,0 +1,214 @@
+
+// BIST: Built-In Self Test support module
+
+use { CONSOLE } from ksp::console
+use { Vessel } from ksp::vessel
+use { current_time } from ksp::game
+
+use { Bist, BistResult } from fx::bist
+
+// ======== below here is stuff used only for doing BIST of BIST ========
+
+fn test_bist_reports_pass(bist: Bist, name: string,
+    inner_case_func: fn(Bist, string) -> BistResult) -> BistResult = {
+    const inner_bist : Bist = Bist()
+    const result : BistResult = inner_case_func(inner_bist, name)
+    if (!result.success) {
+        bist.add_fail_head(name, result.error)
+        while (!inner_bist.empty())
+            bist.add("log line: " + inner_bist.pop().value)
+        bist.add_fail_tail(name)
+    } else if (inner_bist.empty()) {
+        bist.add_fail_head(name, "no log data added")
+            .add_fail_tail(name)
+    } else {
+        // Tests that pass must produce log output,
+        // and the first line must be "PASS: " and the case name.
+        // It may produce additional data, but for the PASS case,
+        // it is likely that no additional detail is needed.
+        // Locking down anything about the rest of the log output
+        // in testing is overspecificaion of behavior.
+        const l1 : string = inner_bist.pop().value
+        const x1 : string = "PASS: " + name
+        if (l1 != x1) {
+            bist.add_fail_head(name, "wrong log data added")
+                .add("expected: " + x1)
+                .add("observed: " + l1)
+            while (!inner_bist.empty())
+                bist.add("log line: " + inner_bist.pop().value)
+            bist.add_fail_tail(name)
+        } else {
+            bist.pass(name)
+        }
+    }
+}
+
+fn test_bist_reports_fail(bist: Bist, name: string,
+    inner_case_func: fn(Bist, string) -> BistResult) -> BistResult = {
+    const inner_bist : Bist = Bist()
+    const result : BistResult = inner_case_func(inner_bist, name)
+    if (result.success) {
+        bist.add_fail_head(name, result.value)
+            .add_fail_tail(name)
+    } else if (inner_bist.empty()) {
+        bist.add_fail_head(name, "no log data added")
+            .add_fail_tail(name)
+    } else {
+        // Tests that fail must produce log output,
+        // and the first line must be "FAIL: " and the case name.
+        // It may produce additional data, and for the FAIL case,
+        // it is likely that more additional detail is needed.
+        // Locking down anything about the rest of the log output
+        // in testing is overspecificaion of behavior.
+        const l1 : string = inner_bist.pop().value
+        const x1 : string = "FAIL: " + name
+        if (l1 != x1) {
+            bist.add_fail_head(name, "wrong log data added")
+                .add("expected text: " + x1)
+                .add("observed text: " + l1)
+            while (!bist.empty()) {
+                bist.add("... " + bist.pop().value)
+            }
+            bist.add_fail_tail(name)
+        } else {
+            bist.pass(name)
+        }
+    }
+}
+
+fn test_bist_log_quickly(name: string) -> BistResult = {
+    CONSOLE.print_line("quick bist bist check")
+    const bist : Bist = Bist()
+
+    if (!bist.empty()) return Err(name + " FAIL: new bist, log is not empty")
+
+    bist
+        .add("bist log test line one")
+        .add("bist log test line two")
+
+    CONSOLE.print_line("please check manually that this prints the two lines")
+    bist.print()
+
+    if (bist.empty()) return Err(name + " FAIL: bist log empty, should have two lines")
+    const l1 = bist.pop()
+    if (!l1.defined) return Err(name + " FAIL: no l1")
+    if ("bist log test line one" != l1.value) return Err(name + " FAIL: l1 is " + l1.value)
+
+    if (bist.empty()) return Err(name + " FAIL: bist log empty, should have one lines")
+    const l2 = bist.pop()
+    if (!l2.defined) return Err(name + " FAIL: no l2")
+    if ("bist log test line two" != l2.value) return Err(name + " FAIL: l2 is " + l2.value)
+
+    if (!bist.empty()) return Err(name + " FAIL: popped bist log has data, should be empty")
+    const l3 = bist.pop()
+    if (l3.defined) return Err(name + " FAIL: l3 is " + l3.value)
+
+    bist
+        .add("bist log test line one")
+        .add("bist log test line two")
+        .clear()
+    if (!bist.empty()) return Err(name + " FAIL: after bist.clear(), bist log has data, should be empty")
+
+    name + " PASS"
+}
+
+fn test_bist_assert_true(bist: Bist, name: string) -> BistResult = {
+
+    test_bist_reports_pass(bist, name + " PASS check",
+        fn(inner_bist, name) -> inner_bist.assert_true(name, true))
+
+    test_bist_reports_fail(bist, name + " FAIL check",
+        fn(inner_bist, name) -> inner_bist.assert_true(name, false))
+
+    bist.summary(name)
+}
+
+fn test_bist_assert_false(bist: Bist, name: string) -> BistResult = {
+
+    test_bist_reports_pass(bist, name + " PASS check",
+        fn(inner_bist, name) -> inner_bist.assert_false(name, false))
+
+    test_bist_reports_fail(bist, name + " FAIL check",
+        fn(inner_bist, name) -> inner_bist.assert_false(name, true))
+
+    bist.summary(name)
+}
+
+fn test_bist_assert_float(bist: Bist, name: string) -> BistResult = {
+
+    test_bist_reports_pass(bist, name + " PASS check",
+        fn(inner_bist, name) -> inner_bist.assert_float(name, 2.0, 3.0, 2.5))
+
+    test_bist_reports_fail(bist, name + " FAIL (lo) check",
+        fn(inner_bist, name) -> inner_bist.assert_float(name, 2.0, 3.0, 1.5))
+
+    test_bist_reports_fail(bist, name + " FAIL (hi) check",
+        fn(inner_bist, name) -> inner_bist.assert_float(name, 2.0, 3.0, 3.5))
+
+    test_bist_reports_fail(bist, name + " FAIL (NaN) check",
+        fn(inner_bist, name) -> inner_bist.assert_float(name, 2.0, 3.0, 0.0 / 0.0))
+
+    bist.summary(name)
+}
+
+fn test_bist_assert_int(bist: Bist, name: string) -> BistResult = {
+
+    test_bist_reports_pass(bist, name + " PASS check",
+        fn(inner_bist, name) -> inner_bist.assert_int(name, 20, 30, 25))
+
+    test_bist_reports_fail(bist, name + " FAIL (lo) check",
+        fn(inner_bist, name) -> inner_bist.assert_int(name, 20, 30, 15))
+
+    test_bist_reports_fail(bist, name + " FAIL (hi) check",
+        fn(inner_bist, name) -> inner_bist.assert_int(name, 20, 30, 35))
+
+    bist.summary(name)
+}
+
+fn test_bist(bist: Bist, name: string) -> BistResult = {
+
+    // Note: yes, we are testing the test code.
+    // some of bist will need to be tested without
+    // assuming the bist code works.
+
+    test_bist_log_quickly(name + " log")?
+
+    test_bist_assert_true(bist, name + " assert_true")
+    test_bist_assert_false(bist, name + " assert_false")
+    test_bist_assert_float(bist, name + " assert_float")
+
+    bist.summary(name)
+}
+
+// I will add entry points to my modules that have tests,
+// and executing the module will run its test.
+//
+// The intention is to trigger tests of new code on the
+// launch pad or when looking at a mission that is in a
+// stable configuration (landed, in orbit, on a long
+// trajectory to elsewhere, etc).
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.clear()
+
+    const t0 = current_time()
+    CONSOLE.print_line("BIST of BIST starts at " + t0.to_string())
+
+    const bist = Bist()
+    let result = test_bist(bist, "bist")
+    let dt = current_time() - t0
+
+    CONSOLE.print_line("")
+    CONSOLE.print_line("full bist log ...")
+    bist.print()
+    CONSOLE.print_line("full bist log done")
+    CONSOLE.print_line("")
+
+    if (result.success) {
+        CONSOLE.print_line("PASS elapsed time " + dt.to_string())
+        CONSOLE.print_line("   " + result.value)
+    } else {
+        CONSOLE.print_line("FAIL elapsed time " + dt.to_string())
+        CONSOLE.print_line("   " + result.error)
+    }
+}
