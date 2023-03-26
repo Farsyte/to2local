@@ -1,0 +1,150 @@
+use { Vessel } from ksp::vessel
+use { CONSOLE } from ksp::console
+
+use { sleep, current_time } from ksp::game
+
+use { Common } from fx::common
+use { Log } from fx::log
+
+use { Bist, BistResult } from fx::bist
+
+use { Scheduler, NEVER } from fx::scheduler
+
+fn test_sch_init(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
+    bist.assert_true(name + " sch has initial NEVER task", sch.next.defined)?
+    bist.assert_float(name + " never-task scheduled time", NEVER, NEVER, sch.next_when())?
+    bist.assert_string(name + " never-task name", "never", sch.next_name())?
+
+    bist.summary(name)
+}
+
+fn test_sch_once(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
+    const t0 = current_time()
+    sch.add(0.1, "once", fn() -> 0.0)
+
+    bist.assert_float(name + " once-task scheduled time", t0+0.09, t0+0.11, sch.next_when())?
+    bist.assert_string(name + " once-task name", "once", sch.next_name())?
+
+    let t2 = sch.next_task()
+    bist.assert_float(name + " once-task return value", 0.0, 0.0, t2())?
+
+    sch.step()
+    bist.assert_string(name + " once-task still pending", "once", sch.next_name())?
+
+    sch.step()
+    bist.assert_string(name + " once-task still pending", "once", sch.next_name())?
+
+    sleep(0.15)
+
+    sch.step()
+    bist.assert_string(name + " once-task no longer pending", "never", sch.next_name())?
+
+    bist.summary(name)
+}
+
+fn test_sch_twice(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
+    const t0 = current_time()
+    sch.add(0.10, "twice", fn() -> 0.1)
+
+    bist.assert_float(name + " twice-task scheduled time", t0+0.09, t0+0.11, sch.next_when())?
+    bist.assert_string(name + " twice-task name", "twice", sch.next_name())?
+
+    let t2 = sch.next_task()
+    bist.assert_float(name + " twice-task return value", 0.1, 0.1, t2())?
+
+    let t2when = sch.next_when()
+
+    sch.step()
+    bist.assert_string(name + " twice-task still pending", "twice", sch.next_name())?
+    bist.assert_float(name + " twice-task same schedule", t2when, t2when, sch.next_when())?
+
+    sch.step()
+    bist.assert_string(name + " twice-task still pending", "twice", sch.next_name())?
+    bist.assert_float(name + " twice-task same schedule", t2when, t2when, sch.next_when())?
+
+    sleep(0.11)
+    let t3 = current_time()
+
+    sch.step()
+    bist.assert_string(name + " twice-task still pending", "twice", sch.next_name())?
+    bist.assert_float(name + " twice-task second schedule", t3+0.10, t3+0.20, sch.next_when())?
+    let t3when = sch.next_when()
+
+    sch.step()
+    bist.assert_string(name + " twice-task still pending", "twice", sch.next_name())?
+    bist.assert_float(name + " twice-task second schedule", t3when, t3when, sch.next_when())?
+
+    sch.next = sch.next.value.next
+    bist.assert_string(name + " twice-task no longer pending", "never", sch.next_name())?
+
+    bist.summary(name)
+}
+
+fn test_sch_fizzbuzz(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
+    const log : Log = Log()
+
+    sch.add(0.3, "fizz", fn() -> {
+        if (log.lines() > 4) return 0.0
+        log.add("fizz")
+        0.3
+    })
+
+    sch.add(0.5, "buzz", fn() -> {
+        if (log.lines() > 4) return 0.0
+        log.add("buzz")
+        0.5
+    })
+
+    sch.loop()
+
+    bist.assert_string(name + " log entry 1 ", "fizz", log.pop().value)
+    bist.assert_string(name + " log entry 2 ", "buzz", log.pop().value)
+    bist.assert_string(name + " log entry 3 ", "fizz", log.pop().value)
+    bist.assert_string(name + " log entry 4 ", "fizz", log.pop().value)
+    bist.assert_string(name + " log entry 5 ", "buzz", log.pop().value)
+
+    bist.summary(name)
+}
+
+fn test_scheduler(bist: Bist, name: string) -> BistResult = {
+
+    // Note: bist.assert_*()? calls (with a trailing ?)
+    // indicate that if that case fails, do nothing more
+    // in this set of cases, returning the failure upward.
+
+    // A fresh scheduler will report that the next pending
+    // task happens NEVER, and if we call it, it returns
+    // a duration that will be reached NEVER.
+
+    const sch = Scheduler()
+    test_sch_init(bist, name + " init", sch)?
+    test_sch_once(bist, name + " once", sch)?
+    test_sch_twice(bist, name + " twice", sch)?
+    test_sch_fizzbuzz(bist, name + " fizzbuzz", sch)?
+
+    bist.summary(name)
+}
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.clear()
+
+    const t0 = current_time()
+    CONSOLE.print_line("BIST of SCHEDULER starts at " + t0.to_string())
+
+    const bist = Bist()
+    let result = test_scheduler(bist, "scheduler")
+    let dt = current_time() - t0
+
+    if (result.success) {
+        CONSOLE.print_line("  " + result.value)
+        CONSOLE.print_line("PASS elapsed time " + dt.to_string())
+    } else {
+        CONSOLE.print_line("  " + result.error)
+        CONSOLE.print_line("FAIL elapsed time " + dt.to_string())
+        CONSOLE.print_line("")
+        CONSOLE.print_line("full bist log ...")
+        bist.print()
+        CONSOLE.print_line("full bist log done")
+        CONSOLE.print_line("")
+    }
+}

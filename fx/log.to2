@@ -18,12 +18,17 @@ struct LogLine(text: string) {
 pub struct Log {
     top : Option<LogLine> = noLine
     end : Option<LogLine> = noLine
+    count : int = 0
 }
 
 impl Log {
+    sync fn lines(self) -> int = {
+        self.count
+    }
     sync fn clear(self) -> Log = {
         self.top = noLine
         self.end = noLine
+        self.count = 0
         self
     }
     sync fn empty(self) -> bool = {
@@ -35,6 +40,7 @@ impl Log {
         if (self.end.defined) self.end.value.next = bllr
         if (!self.top.defined) self.top = bllr
         self.end = bllr
+        self.count += 1
         self
     }
     sync fn pop(self) -> Option<string> = {
@@ -44,6 +50,7 @@ impl Log {
         } else {
             const ll = self.top.value
             self.top = ll.next
+            self.count -= 1
             Some(ll.text)
         }
     }
