@@ -1,0 +1,63 @@
+use { Vessel } from ksp::vessel
+use { CONSOLE } from ksp::console
+
+use { current_time } from ksp::game
+
+use { Log } from fx::log
+
+// ======== early testing (do this before using BIST) ========
+// test_log_quickly(): quickly test the parts of Log used by Bist.
+// Testing stuff used by Bist needs to be done without using Bist
+// and needs to be completly clean before actrivating Bist in any way.
+
+fn test_log_quickly(name: string) -> Result<string, string> = {
+    CONSOLE.print_line("quick log check")
+    const log : Log = Log()
+
+    if (!log.empty()) return Err(name + " FAIL: new log is not empty")
+
+    log
+        .add("Log test line one")
+        .add("Log test line two")
+
+    CONSOLE.print_line("please check manually that this prints the two lines")
+    log.print()
+
+    if (log.empty()) return Err(name + " FAIL: log empty, should have two lines")
+    const l1 = log.pop()
+    if (!l1.defined) return Err(name + " FAIL: no l1")
+    if ("Log test line one" != l1.value) return Err(name + " FAIL: l1 is " + l1.value)
+
+    if (log.empty()) return Err(name + " FAIL: log empty, should have one lines")
+    const l2 = log.pop()
+    if (!l2.defined) return Err(name + " FAIL: no l2")
+    if ("Log test line two" != l2.value) return Err(name + " FAIL: l2 is " + l2.value)
+
+    if (!log.empty()) return Err(name + " FAIL: log has data, should be empty")
+    const l3 = log.pop()
+    if (l3.defined) return Err(name + " FAIL: l3 is " + l3.value)
+
+    name + " PASS"
+}
+
+// ======== below here is stuff used only for doing BIST of LOG ========
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.clear()
+
+    const t0 = current_time()
+    CONSOLE.print_line("BIST of LOG starts at " + t0.to_string())
+
+    let result = test_log_quickly("Log quick test")
+    // NOTE: if the above test succeeds, we can create a Bist
+    // and use it to test the more
+
+    let dt = current_time() - t0
+    if (result.success) {
+        CONSOLE.print_line("PASS elapsed time " + dt.to_string())
+        CONSOLE.print_line("   " + result.value)
+    } else {
+        CONSOLE.print_line("FAIL elapsed time " + dt.to_string())
+        CONSOLE.print_line("   " + result.error)
+    }
+}
