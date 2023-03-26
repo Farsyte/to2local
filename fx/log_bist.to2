@@ -20,8 +20,12 @@ fn test_log_quickly(name: string) -> Result<string, string> = {
         .add("Log test line one")
         .add("Log test line two")
 
+    CONSOLE.print_line("")
+    CONSOLE.print_line("vvvvv MANUAL CHECK REQUIRED vvvvv")
     CONSOLE.print_line("please check manually that this prints the two lines")
     log.print()
+    CONSOLE.print_line("^^^^^ MANUAL CHECK REQUIRED ^^^^^")
+    CONSOLE.print_line("")
 
     if (log.empty()) return Err(name + " FAIL: log empty, should have two lines")
     const l1 = log.pop()
@@ -42,22 +46,20 @@ fn test_log_quickly(name: string) -> Result<string, string> = {
 
 // ======== below here is stuff used only for doing BIST of LOG ========
 
-pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
-    CONSOLE.clear()
+// pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+//     CONSOLE.clear()
+//     log_test()?
+//     // open for extension: add more test calls here.
+// }
 
-    const t0 = current_time()
-    CONSOLE.print_line("BIST of LOG starts at " + t0.to_string())
 
+pub fn log_test() -> Result<Unit, string> = {
     let result = test_log_quickly("Log quick test")
-    // NOTE: if the above test succeeds, we can create a Bist
-    // and use it to test the more
 
-    let dt = current_time() - t0
     if (result.success) {
-        CONSOLE.print_line("PASS elapsed time " + dt.to_string())
-        CONSOLE.print_line("   " + result.value)
+        CONSOLE.print_line("PASS: " + result.value)
     } else {
-        CONSOLE.print_line("FAIL elapsed time " + dt.to_string())
-        CONSOLE.print_line("   " + result.error)
+        CONSOLE.print_line("FAIL: " + result.error)
+        Err(result.error)
     }
 }
