@@ -42,7 +42,7 @@ impl Orbital {
         dv
     }
 
-    sync fn circ_ut(self) -> bool = {
+    sync fn circ_ut(self) -> float = {
         const common = self.common
         const vessel = common.vessel
         const met = common.met()
@@ -50,8 +50,6 @@ impl Orbital {
         if (self.mode != 1) {
             self.mode = 1
             self.mode_met = met
-
-            CONSOLE.print_line("Orbital circ_ut")
 
             self.burn_dv = self.circ_dv()
             vessel.autopilot.mode = MODE_AUTOPILOT
@@ -78,17 +76,19 @@ impl Orbital {
         }
 
         if (self.burn_dv.magnitude > 0.01) {
-            return true
+            // it is actually OK for us to not be ultra-fast at
+            // noticing that the remaining DV is tiny.
+            return 1.0
         }
 
         common.t_mgr.throttle = 0.0
         vessel.autopilot.enabled = true
         vessel.autopilot.mode = MODE_PROGRADE
 
-        false
+        0.0
     }
 
-    sync fn circ_ap(self) -> bool = {
+    sync fn circ_ap(self) -> float = {
 
         if ((self.mode != 1) && (self.mode != 2)) {
             const common = self.common
@@ -99,8 +99,6 @@ impl Orbital {
 
             self.mode = 2
             self.mode_met = met
-
-            CONSOLE.print_line("Orbital circ_ap")
 
             self.burn_ut = orbit.next_apoapsis_time(t + 30).value
 

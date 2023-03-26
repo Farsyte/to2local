@@ -27,11 +27,14 @@ pub struct TinkerMission(common: Common) {
 }
 
 impl TinkerMission {
-    fn add(self, task: fn() -> bool) -> Unit = {
+    fn add(self, task: fn() -> float) -> Unit = {
         self.seq.add(task)
     }
     fn run(self) -> Unit = {
-        while (self.seq.step()) {
+        while (true) {
+            let r = self.seq.step()
+            if (r <= 0.0)
+                break
 
             // As of KontrolSystem 0.2.2, I see no way to
             // provide indirect execution of ASYNC methods,

@@ -1,6 +1,10 @@
 use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
 
+pub type float = float
+
+pub type SeqTask = fn() -> float
+
 pub struct Sequencer() {
     next: NodeRef = no_node
     last: NodeRef = no_node
@@ -9,9 +13,9 @@ pub struct Sequencer() {
 
 type NodeRef = Option<Node>
 
-struct Node(task: fn() -> bool) {
+struct Node(task: SeqTask) {
     next: NodeRef = no_node
-    task: fn() -> bool = task
+    task: SeqTask = task
 }
 
 // oddity in KnotrolSystem2 0.2.2.0
@@ -20,7 +24,8 @@ struct Node(task: fn() -> bool) {
 const no_node : NodeRef = None()
 
 impl Sequencer {
-    fn add(self, task: fn() -> bool) -> Unit = {
+
+    fn add(self, task: SeqTask) -> Unit = {
         const nref : NodeRef = Some(Node(task))
         const last : NodeRef = self.last
         if (!self.next.defined)
@@ -29,13 +34,19 @@ impl Sequencer {
             self.last.value.next = nref
         self.last = nref
     }
-    fn step(self) -> bool = {
+
+    fn step(self) -> float = {
         if (self.next.defined) {
-            const n = self.next.value
-            if (!n.task()) {
+            let n = self.next.value
+            let r = n.task()
+            if (r <= 0.0) {
                 self.next = n.next
             }
         }
-        self.next.defined
+        if (self.next.defined) {
+            0.01
+        } else {
+            0.0
+        }
     }
 }

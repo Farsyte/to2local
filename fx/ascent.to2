@@ -15,7 +15,7 @@ pub struct Ascent(common: Common) {
 
 impl Ascent {
 
-    sync fn gravityturn(self) -> bool = {
+    sync fn gravityturn(self) -> float = {
         const common = self.common
         const vessel = common.vessel
         const orbit = vessel.orbit
@@ -24,11 +24,10 @@ impl Ascent {
         const obs_ap = orbit.apoapsis.value
 
         if (obs_ap > des_ap) {
-            CONSOLE.print_line("gravityturn complete")
             common.t_mgr.throttle = 0.0
             vessel.autopilot.enabled = true
             vessel.autopilot.mode = MODE_PROGRADE
-            return false
+            return 0.0
         }
 
         if (self.mode != 3) {
@@ -41,7 +40,6 @@ impl Ascent {
             common.t_mgr.throttle = 1.0
             vessel.autopilot.enabled = true
             vessel.autopilot.mode = MODE_AUTOPILOT
-            CONSOLE.print_line("start gravityturn")
         }
 
         const atm_frac = (vessel.altitude_sealevel - self.alt_min) / (self.alt_max - self.alt_min)
@@ -56,10 +54,12 @@ impl Ascent {
 
         vessel.autopilot.target_orientation = direction.vector
 
-        true
+        // this step needs to execute frequently enough
+        // to make our target_orientation rotate smoothly.
+        0.01
     }
 
-    sync fn spacecoast(self) -> bool = {
+    sync fn spacecoast(self) -> float = {
         const common = self.common
         const vessel = common.vessel
 
@@ -70,12 +70,15 @@ impl Ascent {
             common.t_mgr.throttle = 0.0
             vessel.autopilot.enabled = true
             vessel.autopilot.mode = MODE_PROGRADE
-            CONSOLE.print_line("start spacecoast")
         }
 
         const atm_depth = vessel.main_body.atmosphere_depth
         const vessel_alt = vessel.altitude_sealevel
-        vessel_alt <= atm_depth
+        if (vessel_alt <= atm_depth) {
+            0.1
+        } else {
+            0.0
+        }
     }
 
 }
