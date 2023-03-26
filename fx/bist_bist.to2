@@ -86,8 +86,12 @@ fn test_bist_log_quickly(name: string) -> BistResult = {
         .add("bist log test line one")
         .add("bist log test line two")
 
+    CONSOLE.print_line("")
+    CONSOLE.print_line("vvvvv MANUAL CHECK REQUIRED vvvvv")
     CONSOLE.print_line("please check manually that this prints the two lines")
     bist.print()
+    CONSOLE.print_line("^^^^^ MANUAL CHECK REQUIRED ^^^^^")
+    CONSOLE.print_line("")
 
     if (bist.empty()) return Err(name + " FAIL: bist log empty, should have two lines")
     const l1 = bist.pop()
@@ -200,27 +204,30 @@ fn test_bist(bist: Bist, name: string) -> BistResult = {
 // stable configuration (landed, in orbit, on a long
 // trajectory to elsewhere, etc).
 
-pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
-    CONSOLE.clear()
+// pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+//     CONSOLE.clear()
+//
+//     const bist = Bist()
+//     const result = bist_test(bist)
+//
+//     if (result.success) {
+//     } else {
+//         CONSOLE.print_line("")
+//         CONSOLE.print_line("full bist log ...")
+//         bist.print()
+//         CONSOLE.print_line("full bist log done")
+//         CONSOLE.print_line("")
+//         Err(result.error)
+//     }
+// }
 
-    const t0 = current_time()
-    CONSOLE.print_line("BIST of BIST starts at " + t0.to_string())
-
-    const bist = Bist()
+pub fn bist_test(bist: Bist) -> Result<Unit, string> = {
     let result = test_bist(bist, "bist")
-    let dt = current_time() - t0
-
-    CONSOLE.print_line("")
-    CONSOLE.print_line("full bist log ...")
-    bist.print()
-    CONSOLE.print_line("full bist log done")
-    CONSOLE.print_line("")
 
     if (result.success) {
-        CONSOLE.print_line("PASS elapsed time " + dt.to_string())
-        CONSOLE.print_line("   " + result.value)
+        CONSOLE.print_line("PASS " + result.value)
     } else {
-        CONSOLE.print_line("FAIL elapsed time " + dt.to_string())
-        CONSOLE.print_line("   " + result.error)
+        CONSOLE.print_line("FAIL " + result.error)
+        Err(result.error)
     }
 }

@@ -125,26 +125,32 @@ fn test_scheduler(bist: Bist, name: string) -> BistResult = {
     bist.summary(name)
 }
 
-pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
-    CONSOLE.clear()
+// pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+//     CONSOLE.clear()
+//
+//     const bist : Bist = Bist()
+//     const result = scheduler_bist(bist)
+//     if (result.success) {
+//         CONSOLE.print_line("PASS scheduler_bist")
+//     } else {
+//         CONSOLE.print_line("")
+//         CONSOLE.print_line("full bist log ...")
+//         bist.print()
+//         CONSOLE.print_line("full bist log done")
+//         CONSOLE.print_line("")
+//         CONSOLE.print_line("FAIL " + result.error)
+//         Err(result.error)
+//     }
+// }
 
-    const t0 = current_time()
-    CONSOLE.print_line("BIST of SCHEDULER starts at " + t0.to_string())
+pub fn scheduler_bist(bist: Bist) -> Result<Unit, string> = {
 
-    const bist = Bist()
     let result = test_scheduler(bist, "scheduler")
-    let dt = current_time() - t0
 
     if (result.success) {
-        CONSOLE.print_line("  " + result.value)
-        CONSOLE.print_line("PASS elapsed time " + dt.to_string())
+        CONSOLE.print_line("PASS test_scheduler")
     } else {
-        CONSOLE.print_line("  " + result.error)
-        CONSOLE.print_line("FAIL elapsed time " + dt.to_string())
-        CONSOLE.print_line("")
-        CONSOLE.print_line("full bist log ...")
-        bist.print()
-        CONSOLE.print_line("full bist log done")
-        CONSOLE.print_line("")
+        CONSOLE.print_line("FAIL " + result.error)
+        Err(result.error)
     }
 }
