@@ -1,0 +1,60 @@
+
+use { CONSOLE } from ksp::console
+
+// Log: a log of text lines that can be reviewed.
+
+type LogLineRef = Option<LogLine>
+
+// KontrolSystem 0.2.2 oddity:
+//     next : Option<LogLine> = None()
+// can not be used to initialize next.
+const noLine : LogLineRef = None()
+
+struct LogLine(text: string) {
+    next : LogLineRef = noLine
+    text : string = text
+}
+
+pub struct Log {
+    top : Option<LogLine> = noLine
+    end : Option<LogLine> = noLine
+}
+
+impl Log {
+    sync fn clear(self) -> Log = {
+        self.top = noLine
+        self.end = noLine
+        self
+    }
+    sync fn empty(self) -> bool = {
+        !self.top.defined
+    }
+    sync fn add(self, text: string) -> Log = {
+        // used by BIST
+        const bllr : LogLineRef = Some(LogLine(text))
+        if (self.end.defined) self.end.value.next = bllr
+        if (!self.top.defined) self.top = bllr
+        self.end = bllr
+        self
+    }
+    sync fn pop(self) -> Option<string> = {
+        // used by BIST
+        if (self.empty()) {
+            None()
+        } else {
+            const ll = self.top.value
+            self.top = ll.next
+            Some(ll.text)
+        }
+    }
+    fn print(self) -> Log = {
+        // used by BIST
+        let llr = self.top
+        while (llr.defined) {
+            const ll : LogLine = llr.value
+            CONSOLE.print_line(ll.text)
+            llr = ll.next
+        }
+        self
+    }
+}
