@@ -106,7 +106,7 @@ fn test_sch_fizzbuzz(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     bist.summary(name)
 }
 
-fn test_scheduler(bist: Bist, name: string) -> BistResult = {
+fn test_scheduler(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
 
     // Note: bist.assert_*()? calls (with a trailing ?)
     // indicate that if that case fails, do nothing more
@@ -116,7 +116,7 @@ fn test_scheduler(bist: Bist, name: string) -> BistResult = {
     // task happens NEVER, and if we call it, it returns
     // a duration that will be reached NEVER.
 
-    const sch = Scheduler()
+    const sch = Scheduler(vessel)
     test_sch_init(bist, name + " init", sch)?
     test_sch_once(bist, name + " once", sch)?
     test_sch_twice(bist, name + " twice", sch)?
@@ -143,9 +143,9 @@ fn test_scheduler(bist: Bist, name: string) -> BistResult = {
 //     }
 // }
 
-pub fn scheduler_bist(bist: Bist) -> Result<Unit, string> = {
+pub fn scheduler_bist(bist: Bist, vessel: Vessel) -> Result<Unit, string> = {
 
-    let result = test_scheduler(bist, "scheduler")
+    let result = test_scheduler(bist, "scheduler", vessel)
 
     if (result.success) {
         CONSOLE.print_line("PASS test_scheduler")

@@ -7,10 +7,10 @@ use { log_test } from fx::log_bist
 use { bist_test } from fx::bist_bist
 use { scheduler_bist } from fx::scheduler_bist
 
-pub fn all_test(bist: Bist) -> Result<Unit, string> = {
+pub fn all_test(bist: Bist, vessel: Vessel) -> Result<Unit, string> = {
     log_test()?
     bist_test(bist)?
-    scheduler_bist(bist)?
+    scheduler_bist(bist, vessel)?
 }
 
 pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
@@ -18,7 +18,7 @@ pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
 
     const bist = Bist()
 
-    const result = all_test(bist)
+    const result = all_test(bist, vessel)
 
     if (result.success) {
         CONSOLE.print_line("PASS all_test")

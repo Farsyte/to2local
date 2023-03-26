@@ -7,12 +7,14 @@ use { vec3 } from ksp::math
 use { yield, sleep, current_time } from ksp::game
 
 use { Common } from fx::common
+
 use { Launch } from fx::launch
 use { Ascent } from fx::ascent
 use { Stager } from fx::stager
 use { Orbital } from fx::orbital
 
-use { Sequencer } from fx::sequencer
+use { Bist } from fx::bist
+use { all_test } from fx::all_bist
 
 pub struct TinkerMission(common: Common) {
     common : Common = common
@@ -22,17 +24,15 @@ pub struct TinkerMission(common: Common) {
     launch : Launch = Launch(common)
     ascent : Ascent = Ascent(common)
     orbital : Orbital = Orbital(common)
-
-    seq : Sequencer = Sequencer()
 }
 
 impl TinkerMission {
     fn add(self, task: fn() -> float) -> Unit = {
-        self.seq.add(task)
+        self.common.sequencer.add(task)
     }
     fn run(self) -> Unit = {
         while (true) {
-            let r = self.seq.step()
+            let r = self.common.sequencer.step()
             if (r <= 0.0)
                 break
 
@@ -55,8 +55,8 @@ fn tinker_bist(vessel: Vessel) -> Result<Unit, string> = {
     CONSOLE.print_line("")
     CONSOLE.print_line("Running BIST before staring ...")
 
-    const bist : fx::bist::Bist = fx::bist::Bist()
-    const result = fx::all_bist::all_test(bist)
+    const bist : Bist = Bist()
+    const result = all_test(bist, vessel)
     if (result.success) {
         CONSOLE.print_line("PASS all_bist")
         CONSOLE.print_line("")
