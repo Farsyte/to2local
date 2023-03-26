@@ -8,6 +8,7 @@ use { Common } from fx::common
 
 pub struct Launch(common: Common) {
     common : Common = common
+
     mode : int = 0
     mode_ut : float = 0.0
 
@@ -74,6 +75,9 @@ impl Launch {
         if (self.mode != 2) {
             self.mode = 2
             self.mode_ut = t
+
+            CONSOLE.print_line("launching")
+
             self.liftoff_done_alt = vessel.altitude_sealevel + self.launch_height
             common.t0 = t       // this is the REAL T-0 universal time.
             common.t_mgr.throttle = 1.0

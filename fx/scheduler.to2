@@ -1,18 +1,16 @@
 use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
 
-use { sleep, current_time } from ksp::game
+use { yield, sleep, current_time } from ksp::game
 
 use { Common } from fx::common
-
-type SchTaskFunc = fn() -> float
-
-type SchTaskRef = Option<SchTask>
 
 pub struct Scheduler(vessel: Vessel) {
     vessel : Vessel = vessel
 
-    next : SchTaskRef = make_last_sch_task()
+    pend_stage : bool = false
+
+    next : Option<SchTask> = make_last_sch_task()
     name : string = ""
 }
 
@@ -46,7 +44,7 @@ sync fn sch_insert(sch: Scheduler, node: SchTask) -> Unit = {
     t1.next = Some(node)
 }
 
-sync fn sch_remove(sch: Scheduler) -> SchTaskRef = {
+sync fn sch_remove(sch: Scheduler) -> Option<SchTask> = {
     const result = sch.next
     if (result.defined)
         sch.next = result.value.next
@@ -54,21 +52,25 @@ sync fn sch_remove(sch: Scheduler) -> SchTaskRef = {
 }
 
 impl Scheduler {
+    sync fn stage_pending(self) -> bool = { self.pend_stage }
+    sync fn stage_request(self) -> Unit = { self.pend_stage = true }
+    sync fn stage_cancel(self) -> Unit = { self.pend_stage = false }
+
     sync fn next_when(self) -> float = { self.next.value.when }
     sync fn next_name(self) -> string = { self.next.value.name }
-    sync fn next_task(self) -> SchTaskFunc = { self.next.value.task }
+    sync fn next_task(self) -> fn() -> float = { self.next.value.task }
 
-    sync fn add(self, eta: float, name: string, task: SchTaskFunc) -> Unit = {
+    sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Unit = {
         sch_insert(self, SchTask(eta, name, task))
     }
 
-    fn step(self) -> Unit = {
+    sync fn step(self) -> Unit = {
 
         if (current_time() < self.next_when()) {
             return
         }
 
-        const r : SchTaskRef = sch_remove(self)
+        const r : Option<SchTask> = sch_remove(self)
         if (!r.defined) {
             return
         }
@@ -84,10 +86,27 @@ impl Scheduler {
         }
     }
 
+    fn async(self) -> Unit = {
+
+        if (self.stage_pending()) {
+            self.vessel.staging.next()
+            self.stage_cancel()
+        }
+
+    }
+
     fn loop(self) -> Unit = {
         while (self.next_when() < NEVER) {
             self.step()
-            sleep(0.0)
+            self.async()
+
+            // open for extension: we could decide to sleep
+            // for a bit, if it is important to conserve
+            // host CPU cycles. Would not want to sleep longer
+            // than the ETA of the next task, and probably would
+            // not want to sleep for a long time in any case.
+
+            yield()
         }
     }
 }
@@ -96,16 +115,16 @@ pub const NEVER : float = 1.0 / 0.0         // yes, Infinity.
 
 // oddity in KontrolSystem2 0.2.2.0
 // this initializer was not working:
-//    next: SchTaskRef = None()
-const noSchTaskRef : SchTaskRef = None()
+//    next: Option<SchTask> = None()
+const noSchTaskRef : Option<SchTask> = None()
 
-struct SchTask(eta: float, name: string, task: SchTaskFunc) {
-    next : SchTaskRef = noSchTaskRef
+struct SchTask(eta: float, name: string, task: fn() -> float) {
+    next : Option<SchTask> = noSchTaskRef
     when : float = eta + current_time()
     name : string = name
-    task : SchTaskFunc = task
+    task : fn() -> float = task
 }
 
-sync fn make_last_sch_task() -> SchTaskRef = {
+sync fn make_last_sch_task() -> Option<SchTask> = {
     SchTask(NEVER, "never", fn() -> NEVER)
 }

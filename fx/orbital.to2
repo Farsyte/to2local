@@ -11,6 +11,7 @@ use { Common } from fx::common
 
 pub struct Orbital(common: Common) {
     common : Common = common
+
     mode : int = 0
     // mode 0: nothing happening
     // mode 1: planned circ_ut burn
@@ -85,6 +86,8 @@ impl Orbital {
         vessel.autopilot.enabled = true
         vessel.autopilot.mode = MODE_PROGRADE
 
+        CONSOLE.print_line("circularization complete")
+
         0.0
     }
 
@@ -99,6 +102,8 @@ impl Orbital {
 
             self.mode = 2
             self.mode_met = met
+
+            CONSOLE.print_line("circularizing at AP")
 
             self.burn_ut = orbit.next_apoapsis_time(t + 30).value
 

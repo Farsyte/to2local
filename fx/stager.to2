@@ -1,46 +1,45 @@
 use { CONSOLE } from ksp::console
 use { Common } from fx::common
+
 pub struct Stager(common: Common) {
     common : Common = common
 }
+
+sync fn any_flameout(stager: Stager) -> bool = {
+    const common = stager.common
+    let parts = common.vessel.staging
+        .parts_in_stage(common.vessel.staging.current)
+    for (part in parts) {
+        if (part.is_engine && part.engine_module.defined) {
+            let eng = part.engine_module.value
+            if (eng.is_flameout)
+                return true
+        }
+    }
+    false
+}
+
+sync fn stage_needed(stager: Stager) -> bool = {
+    const common = stager.common
+    const vessel = common.vessel
+    const staging = vessel.staging
+
+    (1 < staging.current) &&
+    (0.0 <= common.met()) &&
+    ( (0.0 == vessel.available_thrust) ||
+        any_flameout(stager))
+}
+
 impl Stager {
-    fn count_flameout(self) -> int = {
-        const common = self.common
-        common.vessel.staging
-            .parts_in_stage(common.vessel.staging.current)
-            .filter(fn(part) -> part.is_engine)
-            .filter(fn(part) -> part.engine_module.defined)
-            .map(fn(part) -> part.engine_module.value)
-            .filter(fn(eng) -> eng.is_flameout)
-            .length
-    }
 
-    fn stage_needed(self) -> bool = {
-        const common = self.common
-        const vessel = common.vessel
-        const staging = vessel.staging
-
-        const s = staging.current
-        if (2 > staging.current) {
-            return false
+    sync fn stage_check(self) -> float = {
+        if (self.common.stage_pending()) {
+            1.0
+        } else if (stage_needed(self)) {
+            self.common.stage_request()
+            1.0
+        } else {
+            0.1
         }
-        const met = common.met()
-        if (0.0 > met) {
-            return false
-        }
-        const t = vessel.available_thrust
-        if (0.0 == t) {
-            return true
-        }
-        const foc = self.count_flameout()
-        if (0 != foc) {
-            return true
-        }
-        return false
-    }
-
-    fn maybe_stage(self) -> Unit = {
-        if (self.stage_needed())
-            self.common.vessel.staging.next()
     }
 }

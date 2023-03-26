@@ -27,26 +27,16 @@ pub struct TinkerMission(common: Common) {
 }
 
 impl TinkerMission {
-    fn add(self, task: fn() -> float) -> Unit = {
-        self.common.sequencer.add(task)
+
+    sync fn next_seq(self, task: fn() -> float) -> Unit = {
+        self.common.next_seq(task)
     }
-    fn run(self) -> Unit = {
-        while (true) {
-            let r = self.common.sequencer.step()
-            if (r <= 0.0)
-                break
+    sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Unit = {
+        self.common.run_at(eta, name, task)
+    }
 
-            // As of KontrolSystem 0.2.2, I see no way to
-            // provide indirect execution of ASYNC methods,
-            // so the call chain from the main sequencer loop
-            // down to vessel.staging.next() has to be just
-            // normal explicit calls.
-            //
-            // See issue #20 in Farsyte/to2local for my plans.
-
-            self.stager.maybe_stage()       // staging is ASYNC
-            yield()
-        }
+    fn loop(self) -> Unit = {
+        self.common.loop()
     }
 }
 
@@ -97,12 +87,14 @@ pub fn main_flight( vessel: Vessel, target_apoapsis: float = 80000.0, heading: f
     // mission plan after initial construction, possibly even
     // during execution.
 
-    mission.add(fn () -> mission.launch.manual())
-    mission.add(fn () -> mission.launch.liftoff())
-    mission.add(fn () -> mission.ascent.gravityturn())
-    mission.add(fn () -> mission.ascent.spacecoast())
-    mission.add(fn () -> mission.orbital.circ_ap())
+    mission.next_seq(fn () -> mission.launch.manual())
+    mission.next_seq(fn () -> mission.launch.liftoff())
+    mission.next_seq(fn () -> mission.ascent.gravityturn())
+    mission.next_seq(fn () -> mission.ascent.spacecoast())
+    mission.next_seq(fn () -> mission.orbital.circ_ap())
 
-    mission.run()
+    mission.run_at(1.0, "stage", fn () -> mission.stager.stage_check())
+
+    mission.loop()
     CONSOLE.print_line("mission plan complete")
 }

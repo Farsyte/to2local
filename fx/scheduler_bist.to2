@@ -20,7 +20,7 @@ fn test_sch_init(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
 
 fn test_sch_once(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     const t0 = current_time()
-    sch.add(0.1, "once", fn() -> 0.0)
+    sch.run_at(0.1, "once", fn() -> 0.0)
 
     bist.assert_float(name + " once-task scheduled time", t0+0.09, t0+0.11, sch.next_when())?
     bist.assert_string(name + " once-task name", "once", sch.next_name())?
@@ -44,7 +44,7 @@ fn test_sch_once(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
 
 fn test_sch_twice(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     const t0 = current_time()
-    sch.add(0.10, "twice", fn() -> 0.1)
+    sch.run_at(0.10, "twice", fn() -> 0.1)
 
     bist.assert_float(name + " twice-task scheduled time", t0+0.09, t0+0.11, sch.next_when())?
     bist.assert_string(name + " twice-task name", "twice", sch.next_name())?
@@ -83,13 +83,13 @@ fn test_sch_twice(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
 fn test_sch_fizzbuzz(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     const log : Log = Log()
 
-    sch.add(0.3, "fizz", fn() -> {
+    sch.run_at(0.3, "fizz", fn() -> {
         if (log.lines() > 4) return 0.0
         log.add("fizz")
         0.3
     })
 
-    sch.add(0.5, "buzz", fn() -> {
+    sch.run_at(0.5, "buzz", fn() -> {
         if (log.lines() > 4) return 0.0
         log.add("buzz")
         0.5

@@ -3,35 +3,36 @@ use { CONSOLE } from ksp::console
 
 use { Scheduler } from fx::scheduler
 
-pub type float = float
-
-pub type SeqTask = fn() -> float
-
 pub struct Sequencer(vessel: Vessel) {
     scheduler: Scheduler = Scheduler(vessel)
 
-    next: NodeRef = no_node
-    last: NodeRef = no_node
+    next: Option<Node> = no_node
+    last: Option<Node> = no_node
     step: int = 0
 }
 
-type NodeRef = Option<Node>
-
-struct Node(task: SeqTask) {
-    next: NodeRef = no_node
-    task: SeqTask = task
+struct Node(task: fn() -> float) {
+    next: Option<Node> = no_node
+    task: fn() -> float = task
 }
 
 // oddity in KnotrolSystem2 0.2.2.0
 // this initializer was not working:
-//    next: NodeRef = None()
-const no_node : NodeRef = None()
+//    next: Option<Node> = None()
+const no_node : Option<Node> = None()
 
 impl Sequencer {
+    sync fn stage_pending(self) -> bool = { self.scheduler.stage_pending() }
+    sync fn stage_request(self) -> Unit = { self.scheduler.stage_request() }
+    sync fn stage_cancel(self) -> Unit = { self.scheduler.stage_cancel() }
 
-    fn add(self, task: SeqTask) -> Unit = {
-        const nref : NodeRef = Some(Node(task))
-        const last : NodeRef = self.last
+    sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Unit = {
+        self.scheduler.run_at(eta, name, task)
+    }
+
+    sync fn next_seq(self, task: fn() -> float) -> Unit = {
+        const nref : Option<Node> = Some(Node(task))
+        const last : Option<Node> = self.last
         if (!self.next.defined)
             self.next = nref
         if (self.last.defined)
@@ -39,7 +40,12 @@ impl Sequencer {
         self.last = nref
     }
 
-    fn step(self) -> float = {
+    fn loop(self) -> Unit = {
+        self.run_at(1.0, "seq", fn () -> self.step())
+        self.scheduler.loop()
+    }
+
+    sync fn step(self) -> float = {
         if (self.next.defined) {
             let n = self.next.value
             let r = n.task()
