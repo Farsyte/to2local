@@ -14,9 +14,6 @@ pub struct Scheduler {
     name : string = ""
 }
 
-// TODO: Scheduler::add(name, when, task) adds the task to the schedule.
-// TODO: Scheduler::step() runs the task if it is time to do so, then reschedules it.
-
 sync fn sch_insert(sch: Scheduler, node: SchTask) -> Unit = {
 
     if (!sch.next.defined) {

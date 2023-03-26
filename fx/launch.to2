@@ -23,7 +23,7 @@ pub struct Launch(common: Common) {
 
 impl Launch {
 
-    sync fn launchtime(self) -> bool = {
+    sync fn launchtime(self) -> float = {
         const common = self.common
 
         // Open for expansion:
@@ -37,10 +37,10 @@ impl Launch {
 
         common.t0 = current_time() + 10.0
 
-        false
+        0.0
     }
 
-    sync fn countdown(self) -> bool = {
+    sync fn countdown(self) -> float = {
         const common = self.common
 
         const t = current_time()
@@ -48,7 +48,6 @@ impl Launch {
         if (self.mode != 1) {
             self.mode = 1
             self.mode_ut = t
-            CONSOLE.print_line("start countdown")
         }
 
         const dt = common.t0 - current_time()
@@ -59,15 +58,18 @@ impl Launch {
                 CONSOLE.print_line("countdown: T-" + countdown.to_string())
         }
 
-        dt > 0
+        if (dt > 0) {
+            0.1
+        } else {
+            0.0
+        }
     }
 
-    sync fn liftoff(self) -> bool = {
+    sync fn liftoff(self) -> float = {
         const common = self.common
         const vessel = common.vessel
 
         const t = current_time()
-
 
         if (self.mode != 2) {
             self.mode = 2
@@ -77,13 +79,16 @@ impl Launch {
             common.t_mgr.throttle = 1.0
             vessel.autopilot.enabled = true
             vessel.autopilot.mode = MODE_STABILITYASSIST
-            CONSOLE.print_line("start liftoff")
         }
 
-        vessel.altitude_sealevel < self.liftoff_done_alt
+        if (vessel.altitude_sealevel < self.liftoff_done_alt) {
+            0.1
+        } else {
+            0.0
+        }
     }
 
-    sync fn manual(self) -> bool = {
+    sync fn manual(self) -> float = {
         const common = self.common
         const vessel = common.vessel
 
@@ -109,7 +114,11 @@ impl Launch {
             CONSOLE.print_line("awaiting launch")
         }
 
-        vessel.available_thrust <= self.launch_thrust
+        if (vessel.available_thrust <= self.launch_thrust) {
+            0.1
+        } else {
+            0.0
+        }
     }
 
 }
