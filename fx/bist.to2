@@ -78,6 +78,17 @@ impl Bist {
         }
     }
 
+    sync fn assert_string(self, name: string, expected: string, observed: string) -> BistResult = {
+        if (observed == expected) {
+            self.pass(name)
+        } else {
+            self.add_fail_head(name, "string does not match")
+                .add("observed: " + observed)
+                .add("expected: " + expected)
+                .add_fail_tail(name)
+        }
+    }
+
     sync fn clear(self) -> Bist = {
         self.test_count = 0
         self.fail_count = 0

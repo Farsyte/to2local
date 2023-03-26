@@ -1,0 +1,112 @@
+use { Vessel } from ksp::vessel
+use { CONSOLE } from ksp::console
+
+use { sleep, current_time } from ksp::game
+
+use { Common } from fx::common
+
+type SchTaskFunc = fn() -> float
+
+type SchTaskRef = Option<SchTask>
+
+pub struct Scheduler {
+    next : SchTaskRef = make_last_sch_task()
+    name : string = ""
+}
+
+// TODO: Scheduler::add(name, when, task) adds the task to the schedule.
+// TODO: Scheduler::step() runs the task if it is time to do so, then reschedules it.
+
+sync fn sch_insert(sch: Scheduler, node: SchTask) -> Unit = {
+
+    if (!sch.next.defined) {
+        // safety net (should never happen)
+        sch.next = Some(node)
+        return
+    }
+
+    if (node.when < sch.next.value.when) {
+        // expected common case: inserting at the head of the list
+        node.next = sch.next
+        sch.next = Some(node)
+        return
+    }
+
+    // insert into the list after all nodes
+    // whose scheduled times are earlier or the same.
+    let t1 = sch.next.value
+    while (t1.next.defined) {
+        let t2 = t1.next.value
+        if (node.when < t2.when) {
+            break
+        }
+        t1 = t2
+    }
+
+    node.next = t1.next
+    t1.next = Some(node)
+}
+
+sync fn sch_remove(sch: Scheduler) -> SchTaskRef = {
+    const result = sch.next
+    if (result.defined)
+        sch.next = result.value.next
+    result
+}
+
+impl Scheduler {
+    sync fn next_when(self) -> float = { self.next.value.when }
+    sync fn next_name(self) -> string = { self.next.value.name }
+    sync fn next_task(self) -> SchTaskFunc = { self.next.value.task }
+
+    sync fn add(self, eta: float, name: string, task: SchTaskFunc) -> Unit = {
+        sch_insert(self, SchTask(eta, name, task))
+    }
+
+    fn step(self) -> Unit = {
+
+        if (current_time() < self.next_when()) {
+            return
+        }
+
+        const r : SchTaskRef = sch_remove(self)
+        if (!r.defined) {
+            return
+        }
+
+        if (self.name != r.value.name) {
+            self.name = r.value.name
+        }
+
+        let dt = r.value.task()
+        if (dt > 0.0) {
+            r.value.when = current_time() + dt
+            sch_insert(self, r.value)
+        }
+    }
+
+    fn loop(self) -> Unit = {
+        while (self.next_when() < NEVER) {
+            self.step()
+            sleep(0.0)
+        }
+    }
+}
+
+pub const NEVER : float = 1.0 / 0.0         // yes, Infinity.
+
+// oddity in KontrolSystem2 0.2.2.0
+// this initializer was not working:
+//    next: SchTaskRef = None()
+const noSchTaskRef : SchTaskRef = None()
+
+struct SchTask(eta: float, name: string, task: SchTaskFunc) {
+    next : SchTaskRef = noSchTaskRef
+    when : float = eta + current_time()
+    name : string = name
+    task : SchTaskFunc = task
+}
+
+sync fn make_last_sch_task() -> SchTaskRef = {
+    SchTask(NEVER, "never", fn() -> NEVER)
+}

@@ -165,6 +165,17 @@ fn test_bist_assert_int(bist: Bist, name: string) -> BistResult = {
     bist.summary(name)
 }
 
+fn test_bist_assert_string(bist: Bist, name: string) -> BistResult = {
+
+    test_bist_reports_pass(bist, name + " PASS check",
+        fn(inner_bist, name) -> inner_bist.assert_string(name, "correct-string", "correct-string"))
+
+    test_bist_reports_fail(bist, name + " FAIL check",
+        fn(inner_bist, name) -> inner_bist.assert_string(name, "correct-string", "not-correct-string"))
+
+    bist.summary(name)
+}
+
 fn test_bist(bist: Bist, name: string) -> BistResult = {
 
     // Note: yes, we are testing the test code.
@@ -176,6 +187,7 @@ fn test_bist(bist: Bist, name: string) -> BistResult = {
     test_bist_assert_true(bist, name + " assert_true")
     test_bist_assert_false(bist, name + " assert_false")
     test_bist_assert_float(bist, name + " assert_float")
+    test_bist_assert_string(bist, name + " assert_string")
 
     bist.summary(name)
 }
