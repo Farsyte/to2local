@@ -6,6 +6,7 @@ use { Common } from fx::common
 
 pub struct Ascent(common: Common) {
     common : Common = common
+
     mode : int = 0
     mode_met : float = 0.0
 
@@ -33,6 +34,8 @@ impl Ascent {
         if (self.mode != 3) {
             self.mode = 3
             self.mode_met = common.met()
+
+            CONSOLE.print_line("starting gravity turn")
 
             self.alt_min = vessel.altitude_sealevel
             self.alt_max = max(vessel.main_body.atmosphere_depth, self.alt_min + 1000)
@@ -66,6 +69,8 @@ impl Ascent {
         if (self.mode != 4) {
             self.mode = 4
             self.mode_met = common.met()
+
+            CONSOLE.print_line("coasting to space")
 
             common.t_mgr.throttle = 0.0
             vessel.autopilot.enabled = true

@@ -30,7 +30,22 @@ pub struct Common(vessel: Vessel) {
 }
 
 impl Common {
+    sync fn stage_pending(self) -> bool = { self.sequencer.stage_pending() }
+    sync fn stage_request(self) -> Unit = { self.sequencer.stage_request() }
+    sync fn stage_cancel(self) -> Unit = { self.sequencer.stage_cancel() }
+
+    fn loop(self) -> Unit = {
+        self.sequencer.loop()
+    }
+
     sync fn met(self) -> float = {
         current_time() - self.t0
     }
+    sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Unit = {
+        self.sequencer.run_at(eta, name, task)
+    }
+    sync fn next_seq(self, task: fn() -> float) -> Unit = {
+        self.sequencer.next_seq(task)
+    }
+
 }
