@@ -35,7 +35,7 @@ impl Log {
         !self.top.defined
     }
     sync fn add(self, text: string) -> Log = {
-        // used by BIST
+        // used by BIST. must be tested outside the BIST framework.
         const bllr : LogLineRef = Some(LogLine(text))
         if (self.end.defined) self.end.value.next = bllr
         if (!self.top.defined) self.top = bllr
@@ -44,7 +44,7 @@ impl Log {
         self
     }
     sync fn pop(self) -> Option<string> = {
-        // used by BIST
+        // used by BIST. must be tested outside the BIST framework.
         if (self.empty()) {
             None()
         } else {
@@ -55,7 +55,9 @@ impl Log {
         }
     }
     fn print(self) -> Log = {
-        // used by BIST
+        // the effect of this function is not something that can
+        // be tested during automation -- at best, we can exercise
+        // it and ask the flight engineer to confirm operation.
         let llr = self.top
         while (llr.defined) {
             const ll : LogLine = llr.value

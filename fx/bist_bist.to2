@@ -86,12 +86,15 @@ fn test_bist_log_quickly(name: string) -> BistResult = {
         .add("bist log test line one")
         .add("bist log test line two")
 
-    CONSOLE.print_line("")
-    CONSOLE.print_line("vvvvv MANUAL CHECK REQUIRED vvvvv")
-    CONSOLE.print_line("please check manually that this prints the two lines")
-    bist.print()
-    CONSOLE.print_line("^^^^^ MANUAL CHECK REQUIRED ^^^^^")
-    CONSOLE.print_line("")
+    const run_manual_checks : bool = false
+    if (run_manual_checks) {
+        CONSOLE.print_line("")
+        CONSOLE.print_line("vvvvv MANUAL CHECK REQUIRED vvvvv")
+        CONSOLE.print_line("please check manually that this prints the two lines")
+        bist.print()
+        CONSOLE.print_line("^^^^^ MANUAL CHECK REQUIRED ^^^^^")
+        CONSOLE.print_line("")
+    }
 
     if (bist.empty()) return Err(name + " FAIL: bist log empty, should have two lines")
     const l1 = bist.pop()

@@ -16,6 +16,18 @@ pub struct Ascent(common: Common) {
 
 impl Ascent {
 
+    // ascent.gravityturn: guide a powered ascent APPROXIMATELY along a gravity turn
+    //
+    // an exact gravity turn would have us locking to surface-prograde through the
+    // atmosphere and transition to orbital-prograde in space, and would require very
+    // careful tuning of initial launch attitude (or an initial pitchover), coupled
+    // with careful thrust design (or active thrust control), which would depend on
+    // details of the vessel design.
+    //
+    // the generic approach taken here is to lock the attitude based on altitude,
+    // keep the engines at full throttle, and allow any design where the resulting
+    // angle of attack is not horribly bad.
+
     sync fn gravityturn(self) -> float = {
         const common = self.common
         const vessel = common.vessel
@@ -24,6 +36,9 @@ impl Ascent {
         const des_ap = common.launch_altitude
         const obs_ap = orbit.apoapsis.value
 
+        // detect completion. This is not a precision rise of our apoapsis,
+        // we just cut the throttle when our projected apoapsis is higher than
+        // the requested initial apoapsis altitude.
         if (obs_ap > des_ap) {
             common.t_mgr.throttle = 0.0
             vessel.autopilot.enabled = true
@@ -36,6 +51,10 @@ impl Ascent {
             self.mode_met = common.met()
 
             CONSOLE.print_line("starting gravity turn")
+
+            // during the first call, calibrate the initial and final altitudes
+            // for the turn, assure we are full throttle, and set the autopilot
+            // to point us in our desired direction.
 
             self.alt_min = vessel.altitude_sealevel
             self.alt_max = max(vessel.main_body.atmosphere_depth, self.alt_min + 1000)
@@ -59,9 +78,15 @@ impl Ascent {
 
         // this step needs to execute frequently enough
         // to make our target_orientation rotate smoothly.
-        0.01
+        //
+        // NOTE: the above could be packaged as a function
+        // executed by the throttle manager. How do we feel
+        // about doing all of the above faster than 10 Hz?
+
+        0.1
     }
 
+    // ascent.spacecoast: unpowered ascent from mid-atmosphere to space
     sync fn spacecoast(self) -> float = {
         const common = self.common
         const vessel = common.vessel
@@ -74,12 +99,13 @@ impl Ascent {
 
             common.t_mgr.throttle = 0.0
             vessel.autopilot.enabled = true
+
+            // Hmmm. I don't see how to switch between
+            // Surface Prograde and Orbital Prograde.
             vessel.autopilot.mode = MODE_PROGRADE
         }
 
-        const atm_depth = vessel.main_body.atmosphere_depth
-        const vessel_alt = vessel.altitude_sealevel
-        if (vessel_alt <= atm_depth) {
+        if (vessel.altitude_sealevel <= vessel.main_body.atmosphere_depth) {
             0.1
         } else {
             0.0

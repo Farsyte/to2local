@@ -81,57 +81,50 @@ impl S1state {
 
         CONSOLE.print_line("")
         CONSOLE.print_line("s1state.run call 3")
-        // I want to pass functions, not lambdas that call functions.
-        // I am very happy to report that this construction WORKS! (tested in 0.2.2)
+        // reference code, works: can pass the name of a sync function.
         dt = self.run_it_with_s1(dt, fwd_sync)
         CONSOLE.print_line("s1state.run call 3 returned " + dt.to_string() + " to run")
 
-        CONSOLE.print_line("")
-        CONSOLE.print_line("s1state.run call 3a")
+        // CONSOLE.print_line("")
+        // CONSOLE.print_line("s1state.run call 3a")
         // I want to pass ASYNC functions to indirect callers.
-        // This compiles without errors, and does not produce an error when running.
-        // HOWEVER: the call made by run_it_with_s1 does nothing, and the value
-        // returned is just the original dt value.
-        dt = self.run_it_with_s1(dt, fwd_async) // does not run fwd_async in KontrolSystem2 0.2.2
-        CONSOLE.print_line("s1state.run call 3a returned " + dt.to_string() + " to run")
+        // Oddity in KontrolSystem 0.2.2: this compiles and runs without
+        // reporting errors, but does not execute fwd_async and the value
+        // of "dt" is not modified.
+        // Oddity in KontrolSystem 0.2.3: compiles, but at runtime triggers
+        // Invalid IL code in FX__S1/AsyncFunction_S1STATE_run:PollValue (): IL_01c2: stloc.s 8
+        // dt = self.run_it_with_s1(dt, fwd_async)
+        // CONSOLE.print_line("s1state.run call 3a returned " + dt.to_string() + " to run")
 
         // CONSOLE.print_line("")
         // CONSOLE.print_line("s1state.run call 4")
-        // this next line has no compile error or warning,
-        // and produces no error or warning at runtime,
-        // but if we make this call, we do NOT see anything
-        // printed by run_it_with_s1, instead, "run" returns.
-        //
+        // Not yet a feature.
+        // Oddity in KontrolSystem 0.2.2 - 0.2.3: no compile error raised.
+        // if executed, will cause *this* function to return.
         // dt = self.run_it_with_s1(dt, s1.s1_sync)
         // CONSOLE.print_line("s1state.run call 4 returned " + dt.to_string() + " to run")
 
         // CONSOLE.print_line("")
         // CONSOLE.print_line("s1state.run call 4a")
-        // this next line has no compile error or warning,
-        // and produces no error or warning at runtime,
-        // but if we make this call, we do NOT see anything
-        // printed by run_it_with_s1, instead, "run" returns.
-        //
+        // Not yet a feature.
+        // Oddity in KontrolSystem 0.2.2 - 0.2.3: no compile error raised.
+        // if executed, will cause *this* function to return.
         // dt = self.run_it_with_s1(dt, s1.s1_async)
         // CONSOLE.print_line("s1state.run call 4a returned " + dt.to_string() + " to run")
 
         // CONSOLE.print_line("")
         // CONSOLE.print_line("s1state.run call 5")
-        // this next line has no compile error or warning,
-        // and produces no error or warning at runtime,
-        // but if we make this call, we do NOT see anything
-        // printed by run_it_without_s1, instead, "run" returns.
-        //
+        // Not yet a feature.
+        // Oddity in KontrolSystem 0.2.2 - 0.2.3: no compile error raised.
+        // if executed, will cause *this* function to return.
         // dt = self.run_it_without_s1(dt, s1.s1_sync)
         // CONSOLE.print_line("s1state.run call 5 returned " + dt.to_string() + " to run")
 
         // CONSOLE.print_line("")
         // CONSOLE.print_line("s1state.run call 5a")
-        // this next line has no compile error or warning,
-        // and produces no error or warning at runtime,
-        // but if we make this call, we do NOT see anything
-        // printed by run_it_without_s1, instead, "run" returns.
-        //
+        // Not yet a feature.
+        // Oddity in KontrolSystem 0.2.2 - 0.2.3: no compile error raised.
+        // if executed, will cause *this* function to return.
         // dt = self.run_it_without_s1(dt, s1.s1_async)
         // CONSOLE.print_line("s1state.run call 5a returned " + dt.to_string() + " to run")
 

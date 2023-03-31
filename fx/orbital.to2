@@ -26,6 +26,14 @@ pub struct Orbital(common: Common) {
 
 impl Orbital {
 
+    // orbital.circ_dv(): compute DV to circularize.
+    // Using mu and r0 from the body we are orbiting,
+    // compute the circular speed at our altitude,
+    // and construct the desired velocity vector
+    // of that length matching our lateral direction.
+    // Return the difference from our current velocity
+    // to that vector, which is the minimum DV we need
+    // to burn to be in a circular orbit.
     sync fn circ_dv(self) -> Vec3 = {
         const common = self.common
         const vessel = common.vessel
@@ -42,6 +50,14 @@ impl Orbital {
 
         dv
     }
+
+    // orbital.circ_ut(): circularize at a specified universal time.
+    //
+    // NOTE: does not use a maneuver node. to execute a maneuver node
+    // requires an error controller reducing a "remaining DV" vector
+    // to zero. If we spend just a little more time updating the target
+    // velocity, we turn into an error controler that controls the error
+    // in our eccentricity, giving us a much better final result.
 
     sync fn circ_ut(self) -> float = {
         const common = self.common
@@ -91,6 +107,15 @@ impl Orbital {
         0.0
     }
 
+    // orbital.circ_ap(): circularize at apoapsis.
+    // the next one, unless it is too soon, in which case do it
+    // at the one after.
+    //
+    // NOTE: it might be better to start slightly earlier, but
+    // it turns out that computing the Delta V and splitting it
+    // across the AP instant is not as good as just starting at
+    // the AP time itself.
+
     sync fn circ_ap(self) -> float = {
 
         if ((self.mode != 1) && (self.mode != 2)) {
@@ -108,7 +133,9 @@ impl Orbital {
             self.burn_ut = orbit.next_apoapsis_time(t + 30).value
 
             // TODO if we would get to periapsis before apoapsis,
-            // then DO IT NOW.
+            // then DO IT NOW because our number one use case here
+            // is when our periapsis is within atmosphere, or even
+            // underground. Going around is not an option.
         }
 
         self.circ_ut()

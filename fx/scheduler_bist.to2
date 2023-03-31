@@ -125,24 +125,6 @@ fn test_scheduler(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
     bist.summary(name)
 }
 
-// pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
-//     CONSOLE.clear()
-//
-//     const bist : Bist = Bist()
-//     const result = scheduler_bist(bist)
-//     if (result.success) {
-//         CONSOLE.print_line("PASS scheduler_bist")
-//     } else {
-//         CONSOLE.print_line("")
-//         CONSOLE.print_line("full bist log ...")
-//         bist.print()
-//         CONSOLE.print_line("full bist log done")
-//         CONSOLE.print_line("")
-//         CONSOLE.print_line("FAIL " + result.error)
-//         Err(result.error)
-//     }
-// }
-
 pub fn scheduler_bist(bist: Bist, vessel: Vessel) -> Result<Unit, string> = {
 
     let result = test_scheduler(bist, "scheduler", vessel)

@@ -1,3 +1,5 @@
+use { max, min, abs } from core::math
+
 use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
 
@@ -16,12 +18,13 @@ struct Node(task: fn() -> float) {
     task: fn() -> float = task
 }
 
-// oddity in KnotrolSystem2 0.2.2.0
+// oddity in KontrolSystem2 0.2.2 - 0.2.3
 // this initializer was not working:
 //    next: Option<Node> = None()
 const no_node : Option<Node> = None()
 
 impl Sequencer {
+    // proxy stage_{pending,request_cancel} down to scheduler.
     sync fn stage_pending(self) -> bool = { self.scheduler.stage_pending() }
     sync fn stage_request(self) -> Unit = { self.scheduler.stage_request() }
     sync fn stage_cancel(self) -> Unit = { self.scheduler.stage_cancel() }
@@ -40,23 +43,45 @@ impl Sequencer {
         self.last = nref
     }
 
+
+    // Provide the "loop" entry point that takes over control of the main
+    // thread to allow execution of async services. Delegate the loop
+    // execution down to the scheduler, after establishing the scheduled
+    // task that will step through the main sequence.
+
     fn loop(self) -> Unit = {
         self.run_at(1.0, "seq", fn () -> self.step())
         self.scheduler.loop()
     }
 
+    // service function to execute a main sequence step.
+    // curently the main sequence is a singlely-linked list
+    // where we discard leading entries as they indicate that
+    // their task is complete.
+    //
+    // sequencer tasks return a floating point value. If this
+    // value is positive, the same task will repeat; if it is
+    // not, we move to the next task. The absolute value is how
+    // long to delay.
+    //
+    // This function returns zero if the main sequence list is
+    // actually empty. If a task returns zero, this function will
+    // return a small but nonzero delay.
+    //
+    // Still not happy with the fact that I am using a single floating
+    // point value to represent two different ideas: how long to wait
+    // until the next call, and whether or not the current task is done.
+
     sync fn step(self) -> float = {
-        if (self.next.defined) {
-            let n = self.next.value
-            let r = n.task()
-            if (r <= 0.0) {
-                self.next = n.next
-            }
-        }
-        if (self.next.defined) {
-            0.01
-        } else {
-            0.0
-        }
+
+        if (!self.next.defined)
+            return 0.0
+
+        let n = self.next.value
+        let r = n.task()
+        if (r <= 0.0)
+            self.next = n.next
+
+        max(0.001, abs(r))
     }
 }
