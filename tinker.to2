@@ -1,0 +1,22 @@
+// tinker: a place for me to scribble my experiments.
+
+use { Vessel, MODE_RADIALOUT, MODE_STABILITYASSIST } from ksp::vessel
+use { CONSOLE } from ksp::console
+use { vec3 } from ksp::math
+use { yield, sleep, current_time } from ksp::game
+
+fn tinker_bist(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.print_line("")
+    CONSOLE.print_line("Running Tests ...")
+    // TODO run tests
+    CONSOLE.print_line("Running Tests ... Done.")
+}
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.clear()
+    CONSOLE.print_line("Hello from Vessel: " + vessel.name)
+
+    tinker_bist(vessel)
+    // TODO do some tinkering
+    CONSOLE.print_line("mission plan complete")
+}

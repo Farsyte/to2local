@@ -1,0 +1,21 @@
+Current Behavior of tinker.to2
+
+My intention is to commit updates to this document alongside changes
+to the tinker script, capturing the current status of the experiment.
+
+* Status
+
+** 2023-04-12 evening
+
+Kerbal Space Program 2 Patch Two has dropped, and I am
+installing Kontrol System 2 version 0.3.3 as I write this.
+
+I have moved all of the scripting from before away (into
+a subdirectiory) and will be rebuilding from the ground
+up with recent changes to both KSP2 and KS2 in mind.
+
+As before, I am drivig toward being able to automate many
+mission phases in a way that allows them to be chunked
+together into simple "fire and forget" automation for all
+automatable aspects of a range of missions.
+
