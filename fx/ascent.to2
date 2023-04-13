@@ -1,5 +1,5 @@
 use { CONSOLE } from ksp::console
-use { MODE_AUTOPILOT, MODE_PROGRADE } from ksp::vessel
+use { AutopilotMode } from ksp::vessel
 use { min, max, sqrt } from core::math
 
 use { Common } from fx::common
@@ -39,9 +39,9 @@ impl Ascent {
         // we just cut the throttle when our projected apoapsis is higher than
         // the requested initial apoapsis altitude.
         if (obs_ap > des_ap) {
-            common.t_mgr.throttle = 0.0
+            common.set_throttle_value(0.0)
             vessel.autopilot.enabled = true
-            vessel.autopilot.mode = MODE_PROGRADE
+            vessel.autopilot.mode = AutopilotMode.Prograde
             return 0.0 }
 
         if (self.mode != 3) {
@@ -57,9 +57,9 @@ impl Ascent {
             self.alt_min = vessel.altitude_sealevel
             self.alt_max = max(vessel.main_body.atmosphere_depth, self.alt_min + 1000)
 
-            common.t_mgr.throttle = 1.0
+            common.set_throttle_value(1.0)
             vessel.autopilot.enabled = true
-            vessel.autopilot.mode = MODE_AUTOPILOT }
+            vessel.autopilot.mode = AutopilotMode.Autopilot }
 
         const atm_frac = (vessel.altitude_sealevel - self.alt_min) / (self.alt_max - self.alt_min)
         const atm_clip = max(0, min(1, atm_frac))
@@ -93,12 +93,12 @@ impl Ascent {
 
             CONSOLE.print_line("coasting to space")
 
-            common.t_mgr.throttle = 0.0
+            common.set_throttle_value(0.0)
             vessel.autopilot.enabled = true
 
             // Hmmm. I don't see how to switch between
             // Surface Prograde and Orbital Prograde.
-            vessel.autopilot.mode = MODE_PROGRADE }
+            vessel.autopilot.mode = AutopilotMode.Prograde }
 
         if (vessel.altitude_sealevel <= vessel.main_body.atmosphere_depth) {
             0.1 }
