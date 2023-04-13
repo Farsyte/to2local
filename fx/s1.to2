@@ -61,6 +61,8 @@ impl S1state {
 
     fn run(self) -> float = {
 
+        const s1 : S1state = self
+
         let dt = 0.17
 
         CONSOLE.print_line("")
@@ -84,43 +86,52 @@ impl S1state {
         // CONSOLE.print_line("")
         // CONSOLE.print_line("s1state.run call 3a")
         // I want to pass ASYNC functions to indirect callers.
-        // Oddity in KontrolSystem 0.2.2: this compiles and runs without
-        // reporting errors, but does not execute fwd_async and the value
-        // of "dt" is not modified.
-        // Oddity in KontrolSystem 0.2.3: compiles, but at runtime triggers
-        // Invalid IL code in FX__S1/AsyncFunction_S1STATE_run:PollValue (): IL_01c2: stloc.s 8
+        // KontrolSystem 0.2.2: this compiles and runs without reporting errors,
+        //   but does not execute fwd_async and the value of "dt" is not modified.
+        // KontrolSystem 0.2.3: compiles, but at runtime triggers
+        //   Invalid IL code in FX__S1/AsyncFunction_S1STATE_run:PollValue (): IL_01c2: stloc.s 8
+        // KontrolSystem 0.3.3: does not compile, generates the error
+        //   Argument task of 'S1state.run_it_with_s1' has to be a sync fn(fx::s1::S1state, float) -> float, but got fn(fx::s1::S1state, float) -> float
         // dt = self.run_it_with_s1(dt, fwd_async)
         // CONSOLE.print_line("s1state.run call 3a returned " + dt.to_string() + " to run")
 
         // CONSOLE.print_line("")
         // CONSOLE.print_line("s1state.run call 4")
-        // Not yet a feature.
-        // Oddity in KontrolSystem 0.2.2 - 0.2.3: no compile error raised.
-        // if executed, will cause *this* function to return.
+        // Not (yet?) a feature.
+        // KontrolSystem 0.2.2 - 0.2.3: compiles without error.
+        //   if executed, will cause *this* function to return.
+        // KontrolSystem 0.3.3: does not compile generates the error
+        //   Type 'S1state' does not have a field 's1_sync'
         // dt = self.run_it_with_s1(dt, s1.s1_sync)
         // CONSOLE.print_line("s1state.run call 4 returned " + dt.to_string() + " to run")
 
         // CONSOLE.print_line("")
         // CONSOLE.print_line("s1state.run call 4a")
-        // Not yet a feature.
-        // Oddity in KontrolSystem 0.2.2 - 0.2.3: no compile error raised.
-        // if executed, will cause *this* function to return.
+        // Not (yet?) a feature.
+        // KontrolSystem 0.2.2 - 0.2.3: compiles without error.
+        //   if executed, will cause *this* function to return.
+        // KontrolSystem 0.3.3: does not compile generates the error
+        //   Type 'S1state' does not have a field 's1_async'
         // dt = self.run_it_with_s1(dt, s1.s1_async)
         // CONSOLE.print_line("s1state.run call 4a returned " + dt.to_string() + " to run")
 
         // CONSOLE.print_line("")
         // CONSOLE.print_line("s1state.run call 5")
-        // Not yet a feature.
-        // Oddity in KontrolSystem 0.2.2 - 0.2.3: no compile error raised.
-        // if executed, will cause *this* function to return.
+        // Not (yet?) a feature.
+        // KontrolSystem 0.2.2 - 0.2.3: compiles without error.
+        //   if executed, will cause *this* function to return.
+        // KontrolSystem 0.3.3: does not compile generates the error
+        //   Type 'S1state' does not have a field 's1_sync'
         // dt = self.run_it_without_s1(dt, s1.s1_sync)
         // CONSOLE.print_line("s1state.run call 5 returned " + dt.to_string() + " to run")
 
         // CONSOLE.print_line("")
         // CONSOLE.print_line("s1state.run call 5a")
-        // Not yet a feature.
-        // Oddity in KontrolSystem 0.2.2 - 0.2.3: no compile error raised.
-        // if executed, will cause *this* function to return.
+        // Not (yet?) a feature.
+        // KontrolSystem 0.2.2 - 0.2.3: compiles without error.
+        //   if executed, will cause *this* function to return.
+        // KontrolSystem 0.3.3: does not compile generates the error
+        //   Type 'S1state' does not have a field 's1_async'
         // dt = self.run_it_without_s1(dt, s1.s1_async)
         // CONSOLE.print_line("s1state.run call 5a returned " + dt.to_string() + " to run")
 
@@ -138,5 +149,4 @@ pub fn main_flight( vessel: Vessel) -> Result<Unit, string> = {
     let result = s1state.run()
     CONSOLE.print_line("")
     CONSOLE.print_line("s1 testing done, returned " + result.to_string())
-
-    sleep(10.0) }
+}

@@ -85,3 +85,23 @@ Testing does not cover .run_at, or interactions between main
 sequence tasks and time-scheduled tasks. These are expected
 to be independent, but single threaded; no task is preempted
 by any other task.
+
+*** transfer and test the S1 package
+
+This is my experiment in passing lambdas and functions. The reference
+formulations passing lambdas directly, and passing the name of a
+sync function directly, continue to work. The other cases that were
+problematic are now all reported as compile errors.
+
+It is a bit unfortunate that this does not work:
+
+    const s1 : S1state = ...
+    indirect_call(s1.s1_sync)
+
+where S1state::s1_sync is a function; it would be nifty if this
+resulted in the indirect_call being able to call the s1_sync
+function, with its "self" parameter properly set.
+
+It is also unfortunate that I can't do indirect execution of
+an async function, this makes staging (and probably other
+things I have not yet encountered) a touch awkward.
