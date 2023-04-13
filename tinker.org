@@ -19,3 +19,13 @@ mission phases in a way that allows them to be chunked
 together into simple "fire and forget" automation for all
 automatable aspects of a range of missions.
 
+*** test the LOG package
+
+Building toward having a BIST package to make it easy to
+construct and run Build-In Self-Tests, which will need a
+way to log results that can be both printed and looked at
+by calling code.
+
+The first step is the self-contained LOG package, and a
+minimial test of enough of it that BIST can be built.
+

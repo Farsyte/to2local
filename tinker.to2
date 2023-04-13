@@ -1,22 +1,33 @@
 // tinker: a place for me to scribble my experiments.
 
-use { Vessel, MODE_RADIALOUT, MODE_STABILITYASSIST } from ksp::vessel
+use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
-use { vec3 } from ksp::math
-use { yield, sleep, current_time } from ksp::game
+
+use { log_test } from fx::log_bist
 
 fn tinker_bist(vessel: Vessel) -> Result<Unit, string> = {
     CONSOLE.print_line("")
-    CONSOLE.print_line("Running Tests ...")
-    // TODO run tests
-    CONSOLE.print_line("Running Tests ... Done.")
+    CONSOLE.print_line("Running BIST before staring ...")
+    CONSOLE.print_line("")
+
+    const result = log_test()
+    if (result.success) {
+        CONSOLE.print_line("PASS: " + result.value)
+        CONSOLE.print_line("")
+    } else {
+        CONSOLE.print_line("FAIL: " + result.error)
+        CONSOLE.print_line("")
+        Err(result.error)
+    }
 }
 
 pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
     CONSOLE.clear()
     CONSOLE.print_line("Hello from Vessel: " + vessel.name)
 
-    tinker_bist(vessel)
-    // TODO do some tinkering
+    tinker_bist(vessel)?
+
+    // TODO run a mission plan.
+
     CONSOLE.print_line("mission plan complete")
 }

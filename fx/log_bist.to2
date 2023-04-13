@@ -1,0 +1,56 @@
+use { Vessel } from ksp::vessel
+use { CONSOLE } from ksp::console
+
+use { current_time } from ksp::game
+
+use { Log } from fx::log
+
+// ======== early testing (do this before using BIST) ========
+// test_log_quickly(): quickly test the parts of Log used by Bist.
+// Testing stuff used by Bist needs to be done without using Bist
+// and needs to be completly clean before actrivating Bist in any way.
+
+fn test_log_quickly(name: string) -> Result<string, string> = {
+    CONSOLE.print_line("quick log check")
+    const log : Log = Log()
+
+    if (!log.empty()) return Err(name + ": new log is not empty")
+
+    log
+        .add("Log test line one")
+        .add("Log test line two")
+
+    const run_manual_checks : bool = true
+    if (run_manual_checks) {
+        CONSOLE.print_line("")
+        CONSOLE.print_line("vvvvv MANUAL CHECK REQUIRED vvvvv")
+        CONSOLE.print_line("please check manually that this prints the two lines")
+        log.print()
+        CONSOLE.print_line("^^^^^ MANUAL CHECK REQUIRED ^^^^^")
+        CONSOLE.print_line("")
+    }
+
+    if (log.empty()) return Err(name + ": log empty, should have two lines")
+    const l1 = log.pop()
+    if (!l1.defined) return Err(name + ": no l1")
+    if ("Log test line one" != l1.value) return Err(name + ": l1 is " + l1.value)
+
+    if (log.empty()) return Err(name + ": log empty, should have one lines")
+    const l2 = log.pop()
+    if (!l2.defined) return Err(name + ": no l2")
+    if ("Log test line two" != l2.value) return Err(name + ": l2 is " + l2.value)
+
+    if (!log.empty()) return Err(name + ": log has data, should be empty")
+    const l3 = log.pop()
+    if (l3.defined) return Err(name + ": l3 is " + l3.value)
+
+    name
+}
+
+// ======== below here is stuff used only for doing BIST of LOG ========
+
+
+pub fn log_test() -> Result<string, string> = {
+    test_log_quickly("Log quick test")?
+    // TODO add more tests here.
+}
