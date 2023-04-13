@@ -24,6 +24,12 @@ struct Node(task: fn() -> float) {
 const no_node : Option<Node> = None()
 
 impl Sequencer {
+
+    // proxy the throttle manipulations.
+    sync fn set_throttle_value(self, value: float) -> Sequencer = {
+        self.scheduler.set_throttle_value(value)
+        self }
+
     // proxy stage_{pending,request_cancel} down to scheduler.
     sync fn stage_pending(self) -> bool = {
         self.scheduler.stage_pending() }

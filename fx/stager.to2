@@ -1,3 +1,4 @@
+use { round } from core::math
 use { CONSOLE } from ksp::console
 use { Common } from fx::common
 
@@ -7,13 +8,15 @@ pub struct Stager(common: Common) {
 
 sync fn any_flameout(stager: Stager) -> bool = {
     const common = stager.common
-    let parts = common.vessel.staging
-        .parts_in_stage(common.vessel.staging.current)
+    const vessel = common.vessel
+    const staging = vessel.staging
+    const stage = staging.current
+    let parts = staging.parts_in_stage(stage)
     for (part in parts) {
         if (part.is_engine && part.engine_module.defined) {
             let eng = part.engine_module.value
-            if (eng.is_flameout)
-                return true } }
+            if (eng.is_flameout) {
+                return true } } }
     false }
 
 sync fn stage_needed(stager: Stager) -> bool = {
@@ -30,10 +33,10 @@ impl Stager {
 
     sync fn stage_check(self) -> float = {
         if (self.common.stage_pending()) {
-            1.0 }
+            0.1 }
         else if (stage_needed(self)) {
             self.common.stage_request()
-            1.0 }
+            0.1 }
         else {
             0.1 } }
 }

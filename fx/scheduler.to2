@@ -1,4 +1,7 @@
+use { round } from core::math
+
 use { Vessel } from ksp::vessel
+use { ThrottleManager } from ksp::control
 use { CONSOLE } from ksp::console
 
 use { yield, sleep, current_time } from ksp::game
@@ -10,6 +13,22 @@ pub struct Scheduler(vessel: Vessel) {
 
     next : Option<SchTask> = make_last_sch_task()
     name : string = ""
+
+    t_mgr: ThrottleManager = vessel.manage_throttle(fn(dt) -> 0.0)
+    time_dostage: float = NEVER
+    time_rethrottle: float = NEVER
+    //
+    // ThrottleManager allows us to specify a throttle setting from 0 to 1,
+    // were 0 is all engines cut and 1 is all engines full.
+    //
+    // things we can do with t_mgr:
+    //
+    //   t_mgr.throttle = 0
+    //   let curr = t_mgr.throttle
+    //
+    //   t_mgr.set_throttle_provider(fn (float) -> float)
+    //   t_mgr.release()
+    //   t_mgr.resume()
 }
 
 // sch_insert(sch, node): insert a node into the schedule.
@@ -51,6 +70,15 @@ sync fn sch_remove(sch: Scheduler) -> Option<SchTask> = {
     result }
 
 impl Scheduler {
+
+    // intercept throttle manipulations.
+    sync fn set_throttle_value(self, value: float) -> Scheduler = {
+        self.t_mgr.throttle = value
+        self }
+    sync fn set_throttle_func(self, tmgr: fn(float) -> float) -> Scheduler = {
+        self.t_mgr.set_throttle_provider(tmgr)
+        self }
+
     // Fundamental "vessel.staging.next()" call is ASYNC.
     // provide simple sync fn stage_{pending,request,cancel}
     // to indicate when staging is (or is not) desired.
@@ -99,10 +127,38 @@ impl Scheduler {
 
     fn async(self) -> Scheduler = {
 
+        const vessel : Vessel = self.vessel
+        const t = current_time()
+
         if (self.stage_pending()) {
-            // The call to KSP to trigger staging is ASYNC.
-            self.vessel.staging.next()
-            self.stage_cancel() }
+
+            // special case: if we are very near the ground
+            // then do not mess with our throttle as it could
+            // cause unexpected lithobraking.
+
+            if (vessel.altitude_terrain <= 100.0) {
+                self.vessel.staging.next()
+                self.stage_cancel()
+                return self }
+
+            if (self.time_dostage == NEVER) {
+                self.t_mgr.release()
+                self.time_dostage = t + 0.5
+                self.time_rethrottle = t + 1.0 }
+
+            if (t > self.time_dostage) {
+                // The call to KSP to trigger staging is ASYNC.
+                self.vessel.staging.next()
+                self.stage_cancel()
+                self.time_dostage = NEVER
+                self.time_rethrottle = t + 0.5 } }
+
+        else {
+            self.time_dostage = NEVER }
+
+        if (t >= self.time_rethrottle) {
+            self.t_mgr.resume()
+            self.time_rethrottle = NEVER }
 
         self }
 

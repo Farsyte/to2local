@@ -1,7 +1,6 @@
 use { CONSOLE } from ksp::console
 use { Vessel } from ksp::vessel
 use { current_time } from ksp::game
-use { ThrottleManager } from ksp::control
 
 use { Sequencer } from fx::sequencer
 
@@ -12,23 +11,15 @@ pub struct Common(vessel: Vessel) {
     t0 : float = current_time() + 3600.0
     launch_azimuth: float = 90.0
     launch_altitude: float = 80000.0
-
-    t_mgr: ThrottleManager = vessel.manage_throttle(fn(dt) -> 0.0)
-    //
-    // ThrottleManager allows us to specify a throttle setting from 0 to 1,
-    // were 0 is all engines cut and 1 is all engines full.
-    //
-    // things we can do with t_mgr:
-    //
-    //   t_mgr.throttle = 0
-    //   let curr = t_mgr.throttle
-    //
-    //   t_mgr.set_throttle_provider(fn (float) -> float)
-    //   t_mgr.release()
-    //   t_mgr.resume()
 }
 
 impl Common {
+
+    // proxy the throttle manipulations.
+    sync fn set_throttle_value(self, value: float) -> Common = {
+        self.sequencer.set_throttle_value(value)
+        self }
+
     // proxy the stage_{pending,request,cancel} API through to sequencer,
     // so that code using Common does not need to know who is actually
     // supplying the staging service.

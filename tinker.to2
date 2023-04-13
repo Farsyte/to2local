@@ -9,7 +9,7 @@ use { all_test, report } from fx::all_bist
 
 use { Common } from fx::common
 
-// use { Stager } from fx::stager
+use { Stager } from fx::stager
 // use { Launch } from fx::launch
 // use { Ascent } from fx::ascent
 // use { Orbital } from fx::orbital
@@ -18,7 +18,7 @@ pub struct TinkerMission(common: Common) {
     common : Common = common
     vessel : Vessel = common.vessel
 
-    // stager : Stager = Stager(common)
+    stager : Stager = Stager(common)
     // launch : Launch = Launch(common)
     // ascent : Ascent = Ascent(common)
     // orbital : Orbital = Orbital(common)
@@ -53,27 +53,26 @@ impl TinkerMission {
         // during execution.
 
         self
-            .next_seq(fn () -> self.full_throttle())
+            .next_seq(fn () -> self.full_throttle_launch_in_five())
         //     .next_seq(fn () -> self.launch.manual())
         //     .next_seq(fn () -> self.launch.liftoff())
         //     .next_seq(fn () -> self.ascent.gravityturn())
         //     .next_seq(fn () -> self.ascent.spacecoast())
         //     .next_seq(fn () -> self.orbital.circ_ap())
 
-        self.next_seq(fn () -> self.manual_operation()) }
+        self.next_seq(fn () -> self.keep_flying()) }
 
     fn start_bg(self)  -> TinkerMission = {
-        // CONSOLE.print_line("adding stage_check to the schedule")
-        // self.run_at(1.0, "stage", fn () -> self.stager.stage_check())
+        CONSOLE.print_line("adding stage_check to the schedule")
+        self.run_at(1.0, "stage", fn () -> self.stager.stage_check())
         self }
 
-    sync fn full_throttle(self) -> float = {
+    sync fn full_throttle_launch_in_five(self) -> float = {
         self.common.t0 = current_time() + 5
-        self.common.t_mgr.throttle = 1.0
+        self.common.set_throttle_value(1.0)
         0.0 }
 
-    sync fn manual_operation(self) -> float = {
-        CONSOLE.print_line("manual operation")
+    sync fn keep_flying(self) -> float = {
         5.0 }
 
     // The rest of this is just proxy functions
