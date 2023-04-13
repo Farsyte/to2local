@@ -61,11 +61,12 @@ fn test_seq_once(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
     const task2 : Visited = Visited("task2")
     const task3 : Visited = Visited("task3")
 
-    seq.next_seq(fn() -> task1.visit())
-    seq.next_seq(fn() -> task2.visit())
-    seq.next_seq(fn() -> task3.visit())
+    seq
+        .next_seq(fn() -> task1.visit())
+        .next_seq(fn() -> task2.visit())
+        .next_seq(fn() -> task3.visit())
+        .loop()
 
-    seq.loop()
     task0.visit()
 
     bist.assert_float(name + " seq.loop() for test_seq_once ran in good time",
@@ -85,7 +86,7 @@ fn test_seq_once(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
     bist.assert_float(name + " seq ran task3 at the right time",
         0.05 + task2.when, 0.15 + task2.when, task3.when)
 
-     bist.summary(name) }
+    bist.summary(name) }
 
 fn test_seq_repeats(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
     // verify operation of sequencer executing three tasks, once each.
@@ -97,11 +98,12 @@ fn test_seq_repeats(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
     const task2 : Visited = Visited("task2", 9)
     const task3 : Visited = Visited("task3")
 
-    seq.next_seq(fn() -> task1.visit())
-    seq.next_seq(fn() -> task2.visit())
-    seq.next_seq(fn() -> task3.visit())
+    seq
+        .next_seq(fn() -> task1.visit())
+        .next_seq(fn() -> task2.visit())
+        .next_seq(fn() -> task3.visit())
+        .loop()
 
-    seq.loop()
     task0.visit()
 
     bist.assert_float(name + " seq.loop() for test_seq_once ran in good time",

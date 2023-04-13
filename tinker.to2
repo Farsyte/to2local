@@ -2,9 +2,94 @@
 
 use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
+use { current_time } from ksp::game
 
 use { Bist, BistResult } from fx::bist
 use { all_test, report } from fx::all_bist
+
+use { Common } from fx::common
+
+// use { Stager } from fx::stager
+// use { Launch } from fx::launch
+// use { Ascent } from fx::ascent
+// use { Orbital } from fx::orbital
+
+pub struct TinkerMission(common: Common) {
+    common : Common = common
+    vessel : Vessel = common.vessel
+
+    // stager : Stager = Stager(common)
+    // launch : Launch = Launch(common)
+    // ascent : Ascent = Ascent(common)
+    // orbital : Orbital = Orbital(common)
+}
+
+impl TinkerMission {
+
+    fn go(self) -> TinkerMission = {
+
+        self.load_seq()
+            .start_bg()
+            .loop()
+        self }
+
+    fn load_seq(self) -> TinkerMission = {
+
+        // I was hoping that "self.launch.manual"
+        // was actually of type "fn () -> bool" but alas
+        // it is not.
+        //
+        // Trying to write
+        //    self.add(self.launch.manual)
+        // gives us the error
+        //    Type fx::launch::Launch does not have a field 'manual'
+        //
+        // So, basically, I exchanged a one-line call into mission
+        // to repeatedly call a lambda until done, with a one-line
+        // call into mission to stash this on a list.
+        //
+        // Why? Well, in theory, this means I can manipulate the
+        // mission plan after initial construction, possibly even
+        // during execution.
+
+        self
+            .next_seq(fn () -> self.full_throttle())
+        //     .next_seq(fn () -> self.launch.manual())
+        //     .next_seq(fn () -> self.launch.liftoff())
+        //     .next_seq(fn () -> self.ascent.gravityturn())
+        //     .next_seq(fn () -> self.ascent.spacecoast())
+        //     .next_seq(fn () -> self.orbital.circ_ap())
+
+        self.next_seq(fn () -> self.manual_operation()) }
+
+    fn start_bg(self)  -> TinkerMission = {
+        // CONSOLE.print_line("adding stage_check to the schedule")
+        // self.run_at(1.0, "stage", fn () -> self.stager.stage_check())
+        self }
+
+    sync fn full_throttle(self) -> float = {
+        self.common.t0 = current_time() + 5
+        self.common.t_mgr.throttle = 1.0
+        0.0 }
+
+    sync fn manual_operation(self) -> float = {
+        CONSOLE.print_line("manual operation")
+        5.0 }
+
+    // The rest of this is just proxy functions
+
+    fn loop(self) -> TinkerMission = {
+        self.common.loop()
+        self }
+
+    sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> TinkerMission = {
+        self.common.run_at(eta, name, task)
+        self }
+
+    sync fn next_seq(self, task: fn() -> float) -> TinkerMission = {
+        self.common.next_seq(task)
+        self }
+}
 
 fn tinker_bist(vessel: Vessel) -> BistResult = {
     CONSOLE.print_line("")
@@ -27,7 +112,9 @@ pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
 
     tinker_bist(vessel)?
 
-    // TODO run a mission plan.
+    const common : Common = Common(vessel)
+    const mission : TinkerMission = TinkerMission(common)
+    mission.go()
 
     CONSOLE.print_line("mission plan complete")
 }

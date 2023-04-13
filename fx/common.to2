@@ -32,23 +32,31 @@ impl Common {
     // proxy the stage_{pending,request,cancel} API through to sequencer,
     // so that code using Common does not need to know who is actually
     // supplying the staging service.
-    sync fn stage_pending(self) -> bool = { self.sequencer.stage_pending() }
-    sync fn stage_request(self) -> Unit = { self.sequencer.stage_request() }
-    sync fn stage_cancel(self) -> Unit = { self.sequencer.stage_cancel() }
+    sync fn stage_pending(self) -> bool = {
+        self.sequencer.stage_pending() }
+    sync fn stage_request(self) -> Common = {
+        self.sequencer.stage_request()
+        self }
+    sync fn stage_cancel(self) -> Common = {
+        self.sequencer.stage_cancel()
+        self }
 
     // Provide the "loop" entry point that takes over control of the main
     // thread to allow execution of async services. Delegate the loop
     // execution down to the sequencer.
-    fn loop(self) -> Unit = {
-        self.sequencer.loop() }
+    fn loop(self) -> Common = {
+        self.sequencer.loop()
+        self }
 
     sync fn met(self) -> float = {
         current_time() - self.t0 }
 
-    sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Unit = {
-        self.sequencer.run_at(eta, name, task) }
+    sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Common = {
+        self.sequencer.run_at(eta, name, task)
+        self }
 
-    sync fn next_seq(self, task: fn() -> float) -> Unit = {
-        self.sequencer.next_seq(task) }
+    sync fn next_seq(self, task: fn() -> float) -> Common = {
+        self.sequencer.next_seq(task)
+        self }
 
 }

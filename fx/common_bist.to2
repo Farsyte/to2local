@@ -72,11 +72,12 @@ fn test_common_seq(bist: Bist, name: string, common: Common) -> BistResult = {
     const task2 : Visited = Visited("task2", 9)
     const task3 : Visited = Visited("task3")
 
-    common.next_seq(fn() -> task1.visit())
-    common.next_seq(fn() -> task2.visit())
-    common.next_seq(fn() -> task3.visit())
+    common
+        .next_seq(fn() -> task1.visit())
+        .next_seq(fn() -> task2.visit())
+        .next_seq(fn() -> task3.visit())
+        .loop()
 
-    common.loop()
     task0.visit()
 
     bist.assert_float(name + " common.loop() for test_seq_once ran in good time",
