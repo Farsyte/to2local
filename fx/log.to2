@@ -22,17 +22,17 @@ pub struct Log {
 
 impl Log {
     sync fn lines(self) -> int = {
-        self.count
-    }
+        self.count }
+
     sync fn clear(self) -> Log = {
         self.top = noLine
         self.end = noLine
         self.count = 0
-        self
-    }
+        self }
+
     sync fn empty(self) -> bool = {
-        !self.top.defined
-    }
+        !self.top.defined }
+
     sync fn add(self, text: string) -> Log = {
         // used by BIST. must be tested outside the BIST framework.
         const bllr : LogLineRef = Some(LogLine(text))
@@ -40,19 +40,19 @@ impl Log {
         if (!self.top.defined) self.top = bllr
         self.end = bllr
         self.count += 1
-        self
-    }
+        self }
+
     sync fn pop(self) -> Option<string> = {
         // used by BIST. must be tested outside the BIST framework.
         if (self.empty()) {
-            None()
-        } else {
+            None() }
+
+        else {
             const ll = self.top.value
             self.top = ll.next
             self.count -= 1
-            Some(ll.text)
-        }
-    }
+            Some(ll.text) } }
+
     fn print(self) -> Log = {
         // the effect of this function is not something that can
         // be tested during automation -- at best, we can exercise
@@ -61,8 +61,8 @@ impl Log {
         while (llr.defined) {
             const ll : LogLine = llr.value
             CONSOLE.print_line(ll.text)
-            llr = ll.next
-        }
-        self
-    }
+            llr = ll.next }
+
+        self }
+
 }

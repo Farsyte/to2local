@@ -39,8 +39,7 @@ impl Launch {
 
         common.t0 = current_time() + 10.0
 
-        0.0
-    }
+        0.0 }
 
     // launch.countdown: print the countdown, end at common.t0
     sync fn countdown(self) -> float = {
@@ -50,23 +49,20 @@ impl Launch {
 
         if (self.mode != 1) {
             self.mode = 1
-            self.mode_ut = t
-        }
+            self.mode_ut = t }        
 
         const dt = common.t0 - current_time()
         const countdown = ceiling(dt).to_int
         if (self.countdown != countdown) {
             self.countdown = countdown
             if (0 < countdown && countdown < 11)
-                CONSOLE.print_line("countdown: T-" + countdown.to_string())
-        }
+                CONSOLE.print_line("countdown: T-" + countdown.to_string()) }
 
         if (dt > 0) {
-            0.1
-        } else {
-            0.0
-        }
-    }
+            0.1 }
+        
+        else {
+            0.0 } }
 
     // launch.liftoff: handle instant of launch through clearing the tower.
     // updates t0 to reflect the actual instant that we first run this function.
@@ -92,15 +88,13 @@ impl Launch {
             common.t0 = t       // this is the REAL T-0 universal time.
             common.t_mgr.throttle = 1.0
             vessel.autopilot.enabled = true
-            vessel.autopilot.mode = MODE_STABILITYASSIST
-        }
+            vessel.autopilot.mode = MODE_STABILITYASSIST }        
 
         if (vessel.altitude_sealevel < self.liftoff_done_alt) {
-            0.1
-        } else {
-            0.0
-        }
-    }
+            0.1 }
+        
+        else {
+            0.0 } }
 
     // launch.manual: await a manual launch.
     // on first call, calibrate how much thrust we need to launch.
@@ -128,14 +122,13 @@ impl Launch {
 
             self.launch_thrust = mu * m / r2
 
-            CONSOLE.print_line("awaiting launch")
-        }
+            CONSOLE.print_line("awaiting launch") }
+        
 
         if (vessel.available_thrust <= self.launch_thrust) {
-            0.1
-        } else {
-            0.0
-        }
-    }
+            0.1 }
+        
+        else {
+            0.0 } }
 
 }

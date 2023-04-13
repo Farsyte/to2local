@@ -15,13 +15,11 @@ struct S1state(common: Common) {
 
 sync fn fwd_sync(s1state: S1state, dt: float) -> float = {
     CONSOLE.print_line("fwd_sync")
-    s1state.s1_sync(dt)
-}
+    s1state.s1_sync(dt) }
 
 fn fwd_async(s1state: S1state, dt: float) -> float = {
     CONSOLE.print_line("fwd_async")
-    s1state.s1_async(dt)
-}
+    s1state.s1_async(dt) }
 
 impl S1state {
 
@@ -33,8 +31,7 @@ impl S1state {
         // but only to synchronous functions.
         //
         CONSOLE.print_line("s1state.s1_sync")
-        round(200.0 * dt) / 100.0
-    }
+        round(200.0 * dt) / 100.0 }    
 
     fn s1_async(self, dt: float) -> float = {
         // This is the less common form the functions that are used
@@ -48,21 +45,20 @@ impl S1state {
         //
         CONSOLE.print_line("s1state.s1_async")
         if (dt < 0) self.vessel.staging.next()
-        round(200.0 * dt) / 100.0
-    }
+        round(200.0 * dt) / 100.0 }    
 
     fn run_it_with_s1(self, dt: float, task: fn(S1state, float) -> float) -> float = {
         CONSOLE.print_line("s1state.run_it_with_s1")
         let result = task(self, dt)
         CONSOLE.print_line("s1state.run_it_with_s1 result is " + result.to_string())
-        return result
-    }
+        return result }
+    
     fn run_it_without_s1(self, dt: float, task: fn(float) -> float) -> float = {
         CONSOLE.print_line("s1state.run_it_without_s1")
         let result = task(dt)
         CONSOLE.print_line("s1state.run_it_without_s1 result is " + result.to_string())
-        return result
-    }
+        return result }
+    
     fn run(self) -> float = {
 
         let dt = 0.17
@@ -130,8 +126,7 @@ impl S1state {
 
         CONSOLE.print_line("")
         CONSOLE.print_line("s1state.run done")
-        dt
-    }
+        dt }
 }
 
 pub fn main_flight( vessel: Vessel) -> Result<Unit, string> = {
@@ -144,5 +139,4 @@ pub fn main_flight( vessel: Vessel) -> Result<Unit, string> = {
     CONSOLE.print_line("")
     CONSOLE.print_line("s1 testing done, returned " + result.to_string())
 
-    sleep(10.0)
-}
+    sleep(10.0) }

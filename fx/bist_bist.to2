@@ -17,11 +17,13 @@ fn test_bist_reports_pass(bist: Bist, name: string,
         bist.add_fail_head(name, result.error)
         while (!inner_bist.empty())
             bist.add("log line: " + inner_bist.pop().value)
-        bist.add_fail_tail(name)
-    } else if (inner_bist.empty()) {
+        bist.add_fail_tail(name) }
+
+    else if (inner_bist.empty()) {
         bist.add_fail_head(name, "no log data added")
-            .add_fail_tail(name)
-    } else {
+            .add_fail_tail(name) }
+
+    else {
         // Tests that pass must produce log output,
         // and the first line must be "PASS: " and the case name.
         // It may produce additional data, but for the PASS case,
@@ -36,12 +38,10 @@ fn test_bist_reports_pass(bist: Bist, name: string,
                 .add("observed: " + l1)
             while (!inner_bist.empty())
                 bist.add("log line: " + inner_bist.pop().value)
-            bist.add_fail_tail(name)
-        } else {
-            bist.pass(name)
-        }
-    }
-}
+            bist.add_fail_tail(name) }
+
+        else {
+            bist.pass(name) } } }
 
 fn test_bist_reports_fail(bist: Bist, name: string,
     inner_case_func: fn(Bist, string) -> BistResult) -> BistResult = {
@@ -49,11 +49,13 @@ fn test_bist_reports_fail(bist: Bist, name: string,
     const result : BistResult = inner_case_func(inner_bist, name)
     if (result.success) {
         bist.add_fail_head(name, result.value)
-            .add_fail_tail(name)
-    } else if (inner_bist.empty()) {
+            .add_fail_tail(name) }
+
+    else if (inner_bist.empty()) {
         bist.add_fail_head(name, "no log data added")
-            .add_fail_tail(name)
-    } else {
+            .add_fail_tail(name) }
+
+    else {
         // Tests that fail must produce log output,
         // and the first line must be "FAIL: " and the case name.
         // It may produce additional data, and for the FAIL case,
@@ -67,14 +69,10 @@ fn test_bist_reports_fail(bist: Bist, name: string,
                 .add("expected text: " + x1)
                 .add("observed text: " + l1)
             while (!bist.empty()) {
-                bist.add("... " + bist.pop().value)
-            }
-            bist.add_fail_tail(name)
-        } else {
-            bist.pass(name)
-        }
-    }
-}
+                bist.add("... " + bist.pop().value) }
+            bist.add_fail_tail(name)}
+        else {
+            bist.pass(name) } } }
 
 fn test_bist_log_quickly(name: string) -> BistResult = {
     const bist : Bist = Bist()
@@ -92,8 +90,8 @@ fn test_bist_log_quickly(name: string) -> BistResult = {
         CONSOLE.print_line("please check manually that this prints the two lines")
         bist.print()
         CONSOLE.print_line("^^^^^ MANUAL CHECK REQUIRED ^^^^^")
-        CONSOLE.print_line("")
-    }
+        CONSOLE.print_line("") }
+
 
     if (bist.empty()) return Err(name + " FAIL: bist log empty, should have two lines")
     const l1 = bist.pop()
@@ -115,8 +113,7 @@ fn test_bist_log_quickly(name: string) -> BistResult = {
         .clear()
     if (!bist.empty()) return Err(name + " FAIL: after bist.clear(), bist log has data, should be empty")
 
-    name + " PASS"
-}
+    name }
 
 fn test_bist_assert_true(bist: Bist, name: string) -> BistResult = {
 
@@ -126,8 +123,7 @@ fn test_bist_assert_true(bist: Bist, name: string) -> BistResult = {
     test_bist_reports_fail(bist, name + " FAIL check",
         fn(inner_bist, name) -> inner_bist.assert_true(name, false))
 
-    bist.summary(name)
-}
+    bist.summary(name) }
 
 fn test_bist_assert_false(bist: Bist, name: string) -> BistResult = {
 
@@ -137,8 +133,7 @@ fn test_bist_assert_false(bist: Bist, name: string) -> BistResult = {
     test_bist_reports_fail(bist, name + " FAIL check",
         fn(inner_bist, name) -> inner_bist.assert_false(name, true))
 
-    bist.summary(name)
-}
+    bist.summary(name) }
 
 fn test_bist_assert_float(bist: Bist, name: string) -> BistResult = {
 
@@ -154,8 +149,7 @@ fn test_bist_assert_float(bist: Bist, name: string) -> BistResult = {
     test_bist_reports_fail(bist, name + " FAIL (NaN) check",
         fn(inner_bist, name) -> inner_bist.assert_float(name, 2.0, 3.0, 0.0 / 0.0))
 
-    bist.summary(name)
-}
+    bist.summary(name) }
 
 fn test_bist_assert_int(bist: Bist, name: string) -> BistResult = {
 
@@ -168,8 +162,7 @@ fn test_bist_assert_int(bist: Bist, name: string) -> BistResult = {
     test_bist_reports_fail(bist, name + " FAIL (hi) check",
         fn(inner_bist, name) -> inner_bist.assert_int(name, 20, 30, 35))
 
-    bist.summary(name)
-}
+    bist.summary(name) }
 
 fn test_bist_assert_string(bist: Bist, name: string) -> BistResult = {
 
@@ -179,8 +172,7 @@ fn test_bist_assert_string(bist: Bist, name: string) -> BistResult = {
     test_bist_reports_fail(bist, name + " FAIL check",
         fn(inner_bist, name) -> inner_bist.assert_string(name, "correct-string", "not-correct-string"))
 
-    bist.summary(name)
-}
+    bist.summary(name) }
 
 fn test_bist(bist: Bist, name: string) -> BistResult = {
 
@@ -188,24 +180,14 @@ fn test_bist(bist: Bist, name: string) -> BistResult = {
     // some of bist will need to be tested without
     // assuming the bist code works.
 
-    test_bist_log_quickly(name + " log")?
+    bist.pass(test_bist_log_quickly(name + " log")?)
 
     test_bist_assert_true(bist, name + " assert_true")
     test_bist_assert_false(bist, name + " assert_false")
     test_bist_assert_float(bist, name + " assert_float")
     test_bist_assert_string(bist, name + " assert_string")
 
-    bist.summary(name)
-}
-
-// I will add entry points to my modules that have tests,
-// and executing the module will run its test.
-//
-// The intention is to trigger tests of new code on the
-// launch pad or when looking at a mission that is in a
-// stable configuration (landed, in orbit, on a long
-// trajectory to elsewhere, etc).
+    bist.summary(name) }
 
 pub fn bist_test(bist: Bist) -> Result<Unit, string> = {
-    test_bist(bist, "bist")?
-}
+    test_bist(bist, "bist")? }

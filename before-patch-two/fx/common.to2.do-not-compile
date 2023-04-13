@@ -41,17 +41,15 @@ impl Common {
     // thread to allow execution of async services. Delegate the loop
     // execution down to the sequencer.
     fn loop(self) -> Unit = {
-        self.sequencer.loop()
-    }
+        self.sequencer.loop() }
 
     sync fn met(self) -> float = {
-        current_time() - self.t0
-    }
+        current_time() - self.t0 }
+    
     sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Unit = {
-        self.sequencer.run_at(eta, name, task)
-    }
+        self.sequencer.run_at(eta, name, task) }
+    
     sync fn next_seq(self, task: fn() -> float) -> Unit = {
-        self.sequencer.next_seq(task)
-    }
+        self.sequencer.next_seq(task) }
 
 }

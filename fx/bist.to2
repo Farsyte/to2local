@@ -21,20 +21,18 @@ impl Bist {
     sync fn assert_true(self, name : string, observed : bool) -> BistResult = {
         if (observed != true) {
             self.add_fail_head(name, "condition is not TRUE")
-                .add_fail_tail(name)
-        } else {
-            self.pass(name)
-        }
-    }
+                .add_fail_tail(name) }
+
+        else {
+            self.pass(name) } }
 
     sync fn assert_false(self, name : string, observed : bool) -> BistResult = {
         if (observed != false) {
             self.add_fail_head(name, "condition is not TRUE")
-                .add_fail_tail(name)
-        } else {
-            self.pass(name)
-        }
-    }
+                .add_fail_tail(name) }
+
+        else {
+            self.pass(name) } }
 
     sync fn assert_float(self, name: string, lo: float, hi: float, observed: float) -> BistResult = {
         if (observed != observed) {
@@ -42,23 +40,24 @@ impl Bist {
                 .add("lo bound: " + lo.to_string())
                 .add("hi bound: " + lo.to_string())
                 .add("observed: " + observed.to_string())
-                .add_fail_tail(name)
-        } else if (observed < lo) {
+                .add_fail_tail(name) }
+
+        else if (observed < lo) {
             self.add_fail_head(name, "value is below allowed range")
                 .add("lo bound: " + lo.to_string())
                 .add("observed: " + observed.to_string())
                 .add("difference: " + (lo - observed).to_string())
-                .add_fail_tail(name)
-        } else if (observed > hi) {
+                .add_fail_tail(name) }
+
+        else if (observed > hi) {
             self.add_fail_head(name, "value is above allowed range")
                 .add("hi bound: " + lo.to_string())
                 .add("observed: " + observed.to_string())
                 .add("difference: " + (observed - hi).to_string())
-                .add_fail_tail(name)
-        } else {
-            self.pass(name)
-        }
-    }
+                .add_fail_tail(name) }
+
+        else {
+            self.pass(name) } }
 
     sync fn assert_int(self, name: string, lo: int, hi: int, observed: int) -> BistResult = {
         if (observed < lo) {
@@ -66,84 +65,73 @@ impl Bist {
                 .add("lo bound: " + lo.to_string())
                 .add("observed: " + observed.to_string())
                 .add("difference: " + (lo - observed).to_string())
-                .add_fail_tail(name)
-        } else if (observed > hi) {
+                .add_fail_tail(name) }
+
+        else if (observed > hi) {
             self.add_fail_head(name, "value is above allowed range")
                 .add("hi bound: " + lo.to_string())
                 .add("observed: " + observed.to_string())
                 .add("difference: " + (observed - hi).to_string())
-                .add_fail_tail(name)
-        } else {
-            self.pass(name)
-        }
-    }
+                .add_fail_tail(name) }
+
+        else {
+            self.pass(name) } }
 
     sync fn assert_string(self, name: string, expected: string, observed: string) -> BistResult = {
         if (observed == expected) {
-            self.pass(name)
-        } else {
+            self.pass(name) }
+
+        else {
             self.add_fail_head(name, "string does not match")
                 .add("observed: " + observed)
                 .add("expected: " + expected)
-                .add_fail_tail(name)
-        }
-    }
+                .add_fail_tail(name) } }
 
     sync fn clear(self) -> Bist = {
         self.test_count = 0
         self.fail_count = 0
         self.log_lines = 0
         self.log.clear()
-        self
-    }
+        self }
 
     sync fn empty(self) -> bool = {
-        self.log.empty()
-    }
+        self.log.empty() }
 
     sync fn pop(self) -> Option<string> = {
         self.log_lines -= 1
-        self.log.pop()
-    }
+        self.log.pop() }
 
     sync fn add(self, text: string) -> Bist = {
         self.log_lines += 1
         self.log.add(text)
-        self
-    }
+        self }
 
     fn print(self) -> Bist = {
         self.log.print()
-        self
-    }
+        self }
 
     sync fn summary(self, name : string) -> BistResult = {
         const nc : string = name + " completed "
         const fc : string = self.fail_count.to_string() + " FAIL results"
         const tc : string = self.test_count.to_string() + " test cases"
         if (self.fail_count > 0) {
-            Err(nc + tc + " with " + fc)
-        } else {
-            Ok(nc + tc)
-        }
-    }
+            Err(nc + tc + " with " + fc) }
+        else {
+            Ok(nc + tc) } }
 
     sync fn add_fail_head(self, name: string, text: string) -> Bist = {
         self.test_count += 1
         self.fail_count += 1
         self.log_lines += 2
         self.add("FAIL: " + name)
-            .add(text)
-    }
+            .add(text) }
 
     sync fn add_fail_tail(self, name: string) -> BistResult = {
-        Err(name)
-    }
+        Err(name) }
 
     sync fn pass(self, name: string) -> BistResult = {
         self.test_count += 1
         self.log_lines += 1
         self.add("PASS: " + name)
-        Ok(name)
-    }
+        Ok(name) }
 }

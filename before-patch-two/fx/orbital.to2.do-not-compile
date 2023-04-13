@@ -48,8 +48,7 @@ impl Orbital {
         const vnew = vhat * vcirc
         const dv = vnew - vold
 
-        dv
-    }
+        dv }
 
     // orbital.circ_ut(): circularize at a specified universal time.
     //
@@ -89,14 +88,12 @@ impl Orbital {
                 const afrac = max(0.01, min(1, (5.0 - aerr) / 4.0))
 
                 afrac * lim_th
-            })
-        }
+            }) }        
 
         if (self.burn_dv.magnitude > 0.01) {
             // it is actually OK for us to not be ultra-fast at
             // noticing that the remaining DV is tiny.
-            return 1.0
-        }
+            return 1.0 }        
 
         common.t_mgr.throttle = 0.0
         vessel.autopilot.enabled = true
@@ -104,8 +101,7 @@ impl Orbital {
 
         CONSOLE.print_line("circularization complete")
 
-        0.0
-    }
+        0.0 }    
 
     // orbital.circ_ap(): circularize at apoapsis.
     // the next one, unless it is too soon, in which case do it
@@ -138,6 +134,5 @@ impl Orbital {
             // underground. Going around is not an option.
         }
 
-        self.circ_ut()
-    }
+        self.circ_ut() }
 }

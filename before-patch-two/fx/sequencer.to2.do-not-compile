@@ -30,8 +30,7 @@ impl Sequencer {
     sync fn stage_cancel(self) -> Unit = { self.scheduler.stage_cancel() }
 
     sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Unit = {
-        self.scheduler.run_at(eta, name, task)
-    }
+        self.scheduler.run_at(eta, name, task) }    
 
     sync fn next_seq(self, task: fn() -> float) -> Unit = {
         const nref : Option<Node> = Some(Node(task))
@@ -40,9 +39,7 @@ impl Sequencer {
             self.next = nref
         if (self.last.defined)
             self.last.value.next = nref
-        self.last = nref
-    }
-
+        self.last = nref }
 
     // Provide the "loop" entry point that takes over control of the main
     // thread to allow execution of async services. Delegate the loop
@@ -51,8 +48,7 @@ impl Sequencer {
 
     fn loop(self) -> Unit = {
         self.run_at(1.0, "seq", fn () -> self.step())
-        self.scheduler.loop()
-    }
+        self.scheduler.loop() }    
 
     // service function to execute a main sequence step.
     // curently the main sequence is a singlely-linked list
@@ -82,6 +78,5 @@ impl Sequencer {
         if (r <= 0.0)
             self.next = n.next
 
-        max(0.001, abs(r))
-    }
+        max(0.001, abs(r)) }
 }

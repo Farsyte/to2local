@@ -13,11 +13,8 @@ sync fn any_flameout(stager: Stager) -> bool = {
         if (part.is_engine && part.engine_module.defined) {
             let eng = part.engine_module.value
             if (eng.is_flameout)
-                return true
-        }
-    }
-    false
-}
+                return true } }
+    false }
 
 sync fn stage_needed(stager: Stager) -> bool = {
     const common = stager.common
@@ -27,19 +24,16 @@ sync fn stage_needed(stager: Stager) -> bool = {
     (1 < staging.current) &&
     (0.0 <= common.met()) &&
     ( (0.0 == vessel.available_thrust) ||
-        any_flameout(stager))
-}
+        any_flameout(stager)) }
 
 impl Stager {
 
     sync fn stage_check(self) -> float = {
         if (self.common.stage_pending()) {
-            1.0
-        } else if (stage_needed(self)) {
+            1.0 }
+        else if (stage_needed(self)) {
             self.common.stage_request()
-            1.0
-        } else {
-            0.1
-        }
-    }
+            1.0 }
+        else {
+            0.1 } }
 }

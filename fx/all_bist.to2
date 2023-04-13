@@ -1,34 +1,28 @@
 use { CONSOLE } from ksp::console
 use { Vessel } from ksp::vessel
 
-use { Bist } from fx::bist
+use { Bist, BistResult } from fx::bist
 
 use { log_test } from fx::log_bist
 use { bist_test } from fx::bist_bist
 use { scheduler_bist } from fx::scheduler_bist
 
-pub fn all_test(bist: Bist, vessel: Vessel) -> Result<Unit, string> = {
+pub fn all_test(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
     log_test()?
     bist_test(bist)?
     scheduler_bist(bist, vessel)?
-}
+    bist.pass(name)? }
 
 pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
     CONSOLE.clear()
 
     const bist = Bist()
+    const name = "all_test"
+    const result = all_test(bist, name, vessel)
 
-    const result = all_test(bist, vessel)
+    if (!result.success) {
+        bist.add_fail_head(name, result.error)
+            .add_fail_tail(name) }
 
-    if (result.success) {
-        CONSOLE.print_line("PASS all_test")
-    } else {
-        CONSOLE.print_line("")
-        CONSOLE.print_line("full bist log ...")
-        bist.print()
-        CONSOLE.print_line("full bist log done")
-        CONSOLE.print_line("")
-        CONSOLE.print_line("FAIL " + result.error)
-        Err(result.error)
-    }
-}
+    bist.print()
+    result? }

@@ -21,15 +21,13 @@ sync fn sch_insert(sch: Scheduler, node: SchTask) -> Unit = {
     if (!sch.next.defined) {
         // safety net (should never happen)
         sch.next = Some(node)
-        return
-    }
+        return }
 
     if (node.when < sch.next.value.when) {
         // expected common case: inserting at the head of the list
         node.next = sch.next
         sch.next = Some(node)
-        return
-    }
+        return }
 
     // insert into the list after all nodes
     // whose scheduled times are earlier or the same.
@@ -38,22 +36,20 @@ sync fn sch_insert(sch: Scheduler, node: SchTask) -> Unit = {
     while (t1.next.defined) {
         let t2 = t1.next.value
         if (node.when < t2.when) {
-            break
-        }
-        t1 = t2
-    }
+            break }
+        t1 = t2 }
 
     node.next = t1.next
-    t1.next = Some(node)
-}
+    t1.next = Some(node) }
+
 
 sync fn sch_remove(sch: Scheduler) -> Option<SchTask> = {
     // TODO prove we never remove the sentinel task, or prevent it.
     const result = sch.next
     if (result.defined)
         sch.next = result.value.next
-    result
-}
+    result }
+
 
 impl Scheduler {
     // Fundamental "vessel.staging.next()" call is ASYNC.
@@ -71,8 +67,7 @@ impl Scheduler {
     // run_at(eta,name,task): in no less than eta seconds, run task.
     // name string stored for debug, status monitor, and logging (TBD).
     sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Unit = {
-        sch_insert(self, SchTask(eta, name, task))
-    }
+        sch_insert(self, SchTask(eta, name, task)) }
 
     sync fn step(self) -> Unit = {
 
@@ -80,36 +75,31 @@ impl Scheduler {
         // remove an existing sentinel task (and thus never attempt
         // to re-insert it after removal).
         if (current_time() < self.next_when()) {
-            return
-        }
+            return }
+
 
         const r : Option<SchTask> = sch_remove(self)
         if (!r.defined) {
-            return
-        }
+            return }
+
 
         if (self.name != r.value.name) {
-            self.name = r.value.name
-        }
+            self.name = r.value.name }
+
 
         // time may advance during this call.
         let dt = r.value.task()
 
         if (dt > 0.0) {
             r.value.when = current_time() + dt
-            sch_insert(self, r.value)
-        }
-    }
+            sch_insert(self, r.value) } }
 
     fn async(self) -> Unit = {
 
         if (self.stage_pending()) {
             // The call to KSP to trigger staging is ASYNC.
             self.vessel.staging.next()
-            self.stage_cancel()
-        }
-
-    }
+            self.stage_cancel() } }
 
     fn loop(self) -> Unit = {
         while (self.next_when() < NEVER) {
@@ -122,9 +112,7 @@ impl Scheduler {
             // than the ETA of the next task, and probably would
             // not want to sleep for a long time in any case.
 
-            yield()
-        }
-    }
+            yield() } }
 }
 
 pub const NEVER : float = 1.0 / 0.0         // yes, Infinity.
@@ -137,9 +125,8 @@ struct SchTask(eta: float, name: string, task: fn() -> float) {
     next : Option<SchTask> = noSchTaskRef
     when : float = eta + current_time()
     name : string = name
-    task : fn() -> float = task
-}
+    task : fn() -> float = task }
 
 sync fn make_last_sch_task() -> Option<SchTask> = {
-    SchTask(NEVER, "never", fn() -> NEVER)
-}
+    SchTask(NEVER, "never", fn() -> NEVER) }
+
