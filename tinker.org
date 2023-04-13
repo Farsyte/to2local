@@ -105,3 +105,34 @@ function, with its "self" parameter properly set.
 It is also unfortunate that I can't do indirect execution of
 an async function, this makes staging (and probably other
 things I have not yet encountered) a touch awkward.
+
+*** transfer and test the STAGER package
+
+This is the auto-stager that watches for flamed-out engines
+in the current stage, and is run via the scheduler.
+
+*** transfer and test the LAUNCH package
+
+Use methods in the Common package to manipulate the throttle,
+and use the AutopilotMode enumeration when setting modes.
+
+*** transfer and test the ASCENT package
+
+Use methods in the Common package to manipulate the throttle,
+and use the AutopilotMode enumeration when setting modes.
+
+*** transfer and test the ORBITAL package
+
+Use methods in the Common package to manipulate the throttle,
+and use the AutopilotMode enumeration when setting modes.
+
+The test vessel is long and heavy when it circularized, which
+drove changes to the termination condition (it needs to be
+based on the desired throttle setting) as well as adding RCS
+to the test vessel, and controlling RCS in the flight plan.
+
+*** finish up the TINKER flight plan
+
+This was updated as we pulled things together above, but it
+is worth noting that the TINKER plan is now set up to use
+all of the above bits and pieces.
