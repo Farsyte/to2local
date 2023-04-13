@@ -3,19 +3,25 @@
 use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
 
-use { log_test } from fx::log_bist
+use { Bist } from fx::bist
+use { all_test } from fx::all_bist
 
 fn tinker_bist(vessel: Vessel) -> Result<Unit, string> = {
     CONSOLE.print_line("")
     CONSOLE.print_line("Running BIST before staring ...")
-    CONSOLE.print_line("")
 
-    const result = log_test()
+    const bist : Bist = Bist()
+    const result = all_test(bist, vessel)
     if (result.success) {
-        CONSOLE.print_line("PASS: " + result.value)
+        CONSOLE.print_line("PASS all_bist")
         CONSOLE.print_line("")
     } else {
-        CONSOLE.print_line("FAIL: " + result.error)
+        CONSOLE.print_line("")
+        CONSOLE.print_line("complete bist log ...")
+        bist.print()
+        CONSOLE.print_line("complete bist log ... done")
+        CONSOLE.print_line("")
+        CONSOLE.print_line("FAIL " + result.error)
         CONSOLE.print_line("")
         Err(result.error)
     }

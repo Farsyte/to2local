@@ -19,7 +19,7 @@ mission phases in a way that allows them to be chunked
 together into simple "fire and forget" automation for all
 automatable aspects of a range of missions.
 
-*** test the LOG package
+*** implement and test the LOG package
 
 Building toward having a BIST package to make it easy to
 construct and run Build-In Self-Tests, which will need a
@@ -28,4 +28,21 @@ by calling code.
 
 The first step is the self-contained LOG package, and a
 minimial test of enough of it that BIST can be built.
+
+*** implement and test the BIST package
+
+**** BIST logging and log examination
+
+Without using the rest of the BIST facility, verify the
+entry points in a Bist that do logging things actually
+store and make available the logged data.
+
+Once this is done, the remainder of the tests are free
+to make use of the logging parts of their bist object.
+
+**** BIST.assert_true(name, boolean)
+**** BIST.assert_false(name, boolean)
+**** BIST.assert_float(name, min_val, max_val, observed)
+**** BIST.assert_int(name, min_val, max_val, observed)
+**** BIST.assert_string(name, expected_string, observed_string)
 
