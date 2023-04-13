@@ -10,7 +10,7 @@ use { all_test, report } from fx::all_bist
 use { Common } from fx::common
 
 use { Stager } from fx::stager
-// use { Launch } from fx::launch
+use { Launch } from fx::launch
 // use { Ascent } from fx::ascent
 // use { Orbital } from fx::orbital
 
@@ -19,7 +19,7 @@ pub struct TinkerMission(common: Common) {
     vessel : Vessel = common.vessel
 
     stager : Stager = Stager(common)
-    // launch : Launch = Launch(common)
+    launch : Launch = Launch(common)
     // ascent : Ascent = Ascent(common)
     // orbital : Orbital = Orbital(common)
 }
@@ -52,10 +52,11 @@ impl TinkerMission {
         // mission plan after initial construction, possibly even
         // during execution.
 
+        // self.next_seq(fn () -> self.full_throttle_launch_in_five())
+
         self
-            .next_seq(fn () -> self.full_throttle_launch_in_five())
-        //     .next_seq(fn () -> self.launch.manual())
-        //     .next_seq(fn () -> self.launch.liftoff())
+             .next_seq(fn () -> self.launch.manual())
+             .next_seq(fn () -> self.launch.liftoff())
         //     .next_seq(fn () -> self.ascent.gravityturn())
         //     .next_seq(fn () -> self.ascent.spacecoast())
         //     .next_seq(fn () -> self.orbital.circ_ap())
@@ -67,13 +68,14 @@ impl TinkerMission {
         self.run_at(1.0, "stage", fn () -> self.stager.stage_check())
         self }
 
-    sync fn full_throttle_launch_in_five(self) -> float = {
-        self.common.t0 = current_time() + 5
-        self.common.set_throttle_value(1.0)
-        0.0 }
+    // sync fn full_throttle_launch_in_five(self) -> float = {
+    //     self.common.t0 = current_time() + 5
+    //     self.common.set_throttle_value(1.0)
+    //     0.0 }
 
     sync fn keep_flying(self) -> float = {
-        5.0 }
+        CONSOLE.print_line("at bottom of mission plan.")
+        0.0 }
 
     // The rest of this is just proxy functions
 

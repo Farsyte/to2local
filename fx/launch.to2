@@ -2,7 +2,7 @@ use { ceiling } from core::math
 
 use { CONSOLE } from ksp::console
 use { current_time } from ksp::game
-use { MODE_STABILITYASSIST } from ksp::vessel
+use { AutopilotMode } from ksp::vessel
 
 use { Common } from fx::common
 
@@ -86,9 +86,9 @@ impl Launch {
 
             self.liftoff_done_alt = vessel.altitude_sealevel + self.launch_height
             common.t0 = t       // this is the REAL T-0 universal time.
-            common.t_mgr.throttle = 1.0
+            common.set_throttle_value(1.0)
             vessel.autopilot.enabled = true
-            vessel.autopilot.mode = MODE_STABILITYASSIST }
+            vessel.autopilot.mode = AutopilotMode.StabilityAssist }
 
         if (vessel.altitude_sealevel < self.liftoff_done_alt) {
             0.1 }
@@ -118,7 +118,7 @@ impl Launch {
             // have the throttle at 100% while waiting for the
             // flight engineer to hit the GO button.
 
-            common.t_mgr.throttle = 1.0
+            common.set_throttle_value(1.0)
 
             self.launch_thrust = mu * m / r2
 
