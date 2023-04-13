@@ -3,8 +3,6 @@ use { CONSOLE } from ksp::console
 
 use { yield, sleep, current_time } from ksp::game
 
-use { Common } from fx::common
-
 pub struct Scheduler(vessel: Vessel) {
     vessel : Vessel = vessel
 
@@ -16,7 +14,8 @@ pub struct Scheduler(vessel: Vessel) {
 
 // sch_insert(sch, node): insert a node into the schedule.
 // only sch_insert and sch_remove care that the schedule
-// is a singlely-linked list in nondescending scheduled time.
+// is a singlely-linked list in nondescending scheduled time
+// with a sentinal task at the end whose WHEN key is NEVER.
 sync fn sch_insert(sch: Scheduler, node: SchTask) -> Unit = {
 
     if (!sch.next.defined) {
@@ -49,7 +48,7 @@ sync fn sch_insert(sch: Scheduler, node: SchTask) -> Unit = {
 }
 
 sync fn sch_remove(sch: Scheduler) -> Option<SchTask> = {
-    // TODO never remove the sentinel task.
+    // TODO prove we never remove the sentinel task, or prevent it.
     const result = sch.next
     if (result.defined)
         sch.next = result.value.next
@@ -130,8 +129,7 @@ impl Scheduler {
 
 pub const NEVER : float = 1.0 / 0.0         // yes, Infinity.
 
-// oddity in KontrolSystem2 0.2.2 - 0.2.3
-// this initializer was not working:
+// KontrolSystem2 type inferrance fails on this kind of initialization:
 //    next: Option<SchTask> = None()
 const noSchTaskRef : Option<SchTask> = None()
 

@@ -77,7 +77,6 @@ fn test_bist_reports_fail(bist: Bist, name: string,
 }
 
 fn test_bist_log_quickly(name: string) -> BistResult = {
-    CONSOLE.print_line("quick bist bist check")
     const bist : Bist = Bist()
 
     if (!bist.empty()) return Err(name + " FAIL: new bist, log is not empty")
@@ -207,30 +206,6 @@ fn test_bist(bist: Bist, name: string) -> BistResult = {
 // stable configuration (landed, in orbit, on a long
 // trajectory to elsewhere, etc).
 
-// pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
-//     CONSOLE.clear()
-//
-//     const bist = Bist()
-//     const result = bist_test(bist)
-//
-//     if (result.success) {
-//     } else {
-//         CONSOLE.print_line("")
-//         CONSOLE.print_line("full bist log ...")
-//         bist.print()
-//         CONSOLE.print_line("full bist log done")
-//         CONSOLE.print_line("")
-//         Err(result.error)
-//     }
-// }
-
 pub fn bist_test(bist: Bist) -> Result<Unit, string> = {
-    let result = test_bist(bist, "bist")
-
-    if (result.success) {
-        CONSOLE.print_line("PASS " + result.value)
-    } else {
-        CONSOLE.print_line("FAIL " + result.error)
-        Err(result.error)
-    }
+    test_bist(bist, "bist")?
 }

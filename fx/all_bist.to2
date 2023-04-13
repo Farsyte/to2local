@@ -5,10 +5,12 @@ use { Bist } from fx::bist
 
 use { log_test } from fx::log_bist
 use { bist_test } from fx::bist_bist
+use { scheduler_bist } from fx::scheduler_bist
 
 pub fn all_test(bist: Bist, vessel: Vessel) -> Result<Unit, string> = {
     log_test()?
     bist_test(bist)?
+    scheduler_bist(bist, vessel)?
 }
 
 pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {

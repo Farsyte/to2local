@@ -5,9 +5,8 @@ use { CONSOLE } from ksp::console
 
 type LogLineRef = Option<LogLine>
 
-// KontrolSystem2 oddity (v0.2.2 thru v0.3.3):
+// KontrolSystem2 type inferrance fails on this kind of initialization:
 //     next : Option<LogLine> = None()
-// can not be used to initialize next.
 const noLine : LogLineRef = None()
 
 struct LogLine(text: string) {

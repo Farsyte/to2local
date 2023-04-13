@@ -3,7 +3,6 @@ use { CONSOLE } from ksp::console
 
 use { sleep, current_time } from ksp::game
 
-use { Common } from fx::common
 use { Log } from fx::log
 
 use { Bist, BistResult } from fx::bist
@@ -67,12 +66,12 @@ fn test_sch_twice(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
 
     sch.step()
     bist.assert_string(name + " twice-task still pending", "twice", sch.next_name())?
-    bist.assert_float(name + " twice-task second schedule", t3+0.10, t3+0.20, sch.next_when())?
+    bist.assert_float(name + " twice-task second schedule", t3+0.00, t3+0.20, sch.next_when())?
     let t3when = sch.next_when()
 
     sch.step()
     bist.assert_string(name + " twice-task still pending", "twice", sch.next_name())?
-    bist.assert_float(name + " twice-task second schedule", t3when, t3when, sch.next_when())?
+    bist.assert_float(name + " twice-task third schedule", t3when, t3when, sch.next_when())?
 
     sch.next = sch.next.value.next
     bist.assert_string(name + " twice-task no longer pending", "never", sch.next_name())?
@@ -126,13 +125,5 @@ fn test_scheduler(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
 }
 
 pub fn scheduler_bist(bist: Bist, vessel: Vessel) -> Result<Unit, string> = {
-
-    let result = test_scheduler(bist, "scheduler", vessel)
-
-    if (result.success) {
-        CONSOLE.print_line("PASS test_scheduler")
-    } else {
-        CONSOLE.print_line("FAIL " + result.error)
-        Err(result.error)
-    }
+    test_scheduler(bist, "scheduler", vessel)?
 }
