@@ -1,0 +1,110 @@
+use { Vessel } from ksp::vessel
+use { CONSOLE } from ksp::console
+
+use { sleep, current_time } from ksp::game
+
+use { Log } from fx::log
+
+use { Bist, BistResult } from fx::bist
+
+use { Common } from fx::common
+
+fn test_common_init(bist: Bist, name: string, common: Common) -> BistResult = {
+    const t0 = current_time()
+
+    // initial state:
+    // - vessel exists and is a valid Vessel (forced by type sstem).
+    // - sequencer exists and is a valid Sequencer (forced by type sstem).
+    // - common.t0 is set a bit into the future
+    // - launch_azimuth is something sane (DO NOT REQUIRE 90)
+    // - launch_altitude is something sane (DO NOT REQUIRE 80 KM)
+    // - t_mgr exists and is a ThrottleManager (forced by type system)
+
+    bist.assert_float(name + " T0 initialized to some future time", t0 + 60.0, 21600.0, common.t0)
+    bist.assert_float(name + " launch azimuth is sane", -180.0, 360.0, common.launch_azimuth)
+    bist.assert_float(name + " launch altitude is sane", 1.0e3, 1.0e9, common.launch_altitude)
+
+    // MET starts out at some reasonable negative value indicating not yet launched.
+    bist.assert_float(name + " MET starts at a negative time", -21600.0, -60.0, common.met())
+
+    bist.assert_false(name + " stage_pending initially should be false", common.stage_pending())?
+    common.stage_request()
+    bist.assert_true(name + " stage_request sets stage_pending to TRUE", common.stage_pending())?
+    common.stage_request()
+    bist.assert_true(name + " stage_request is idempotent", common.stage_pending())?
+    common.stage_cancel()
+    bist.assert_false(name + " stage_cancel sets stage_pending to FALSE", common.stage_pending())?
+    common.stage_cancel()
+    bist.assert_false(name + " stage_cancel is idempotent", common.stage_pending())?
+
+    // check runtime of common.loop() with empty list
+    common.loop()
+    const dt = current_time() - t0
+    bist.assert_float(name + " common.loop() of empty sequence returns promptly",
+        0.0, 5.0, dt)
+
+    bist.summary(name) }
+
+// Yes, this repeats a test from sequencer_bist.
+
+struct Visited(name: string, repeats : int = 0) {
+    name : string = name
+    repeats: int = repeats
+    count : int = 0
+    when : float = 0.0
+}
+
+impl Visited {
+    sync fn visit(self) -> float = {
+        self.count = self.count + 1
+        self.when = current_time()
+        if (self.count > self.repeats) -0.1 else 0.1 }
+}
+
+// just run the "A once, B 10x, C once" to verify it works.
+fn test_common_seq(bist: Bist, name: string, common: Common) -> BistResult = {
+    // verify operation of sequencer executing three tasks, once each.
+
+    const t0 : float = current_time()
+
+    const task0 : Visited = Visited("task0")
+    const task1 : Visited = Visited("task1")
+    const task2 : Visited = Visited("task2", 9)
+    const task3 : Visited = Visited("task3")
+
+    common.next_seq(fn() -> task1.visit())
+    common.next_seq(fn() -> task2.visit())
+    common.next_seq(fn() -> task3.visit())
+
+    common.loop()
+    task0.visit()
+
+    bist.assert_float(name + " common.loop() for test_seq_once ran in good time",
+        0.0 + t0, 10.0 + t0, task0.when)
+
+    bist.assert_int(name + " common ran task1 exactly once",
+        1, 1, task1.count)
+    bist.assert_int(name + " common ran task2 exactly ten times",
+        10, 10, task2.count)
+    bist.assert_int(name + " common ran task3 exactly once",
+        1, 1, task3.count)
+
+    bist.assert_float(name + " common ran task1 at the right time",
+        0.0 + t0, 5.0 + t0, task1.when)
+    bist.assert_float(name + " common ran task2 for the last time at the right time",
+        1.05 + task1.when, 1.25 + task1.when, task2.when)
+    bist.assert_float(name + " common ran task3 at the right time",
+        0.05 + task2.when, 0.15 + task2.when, task3.when)
+
+    bist.summary(name) }
+
+fn test_common(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
+
+    const common = Common(vessel)
+    test_common_init(bist, name + " init", common)?
+    test_common_seq(bist, name + " once", common)?
+
+    bist.summary(name) }
+
+pub fn common_bist(bist: Bist, vessel: Vessel) -> BistResult = {
+    test_common(bist, "common", vessel) }

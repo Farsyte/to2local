@@ -7,6 +7,7 @@ use { log_test } from fx::log_bist
 use { bist_test } from fx::bist_bist
 use { scheduler_bist } from fx::scheduler_bist
 use { sequencer_bist } from fx::sequencer_bist
+use { common_bist } from fx::common_bist
 
 pub fn report(result: BistResult) -> BistResult = {
     if (result.success) {
@@ -20,6 +21,7 @@ pub fn all_test(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
     report(bist_test(bist))?
     report(scheduler_bist(bist, vessel))?
     report(sequencer_bist(bist, vessel))?
+    report(common_bist(bist, vessel))?
     bist.summary(name) }
 
 pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {

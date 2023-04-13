@@ -72,3 +72,16 @@ a few steps, and proper repeating of an intermediate step. This checks
 the number of times each step is called, and the timing of the last
 call to the step.
 
+*** transfer and test the COMMON package
+
+COMMON does not appear to have any code that intersects with the
+updates in KSP-2 or KS2-0.3.3, so no changes needed.
+
+Added COMMON_BIST which was a pending task. It does repeat tests
+done elsewhere, but having these happen here verifies that the
+entry points are properly proxied through.
+
+Testing does not cover .run_at, or interactions between main
+sequence tasks and time-scheduled tasks. These are expected
+to be independent, but single threaded; no task is preempted
+by any other task.

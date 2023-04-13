@@ -10,10 +10,6 @@ use { Bist, BistResult } from fx::bist
 use { Sequencer } from fx::sequencer
 
 fn test_seq_init(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
-//     bist.assert_true(name + " seq has initial NEVER task", seq.next.defined)?
-//     bist.assert_float(name + " never-task seqeduled time", NEVER, NEVER, seq.next_when())?
-//     bist.assert_string(name + " never-task name", "never", seq.next_name())?
-//
 
     bist.assert_false(name + " stage_pending initially should be false", seq.stage_pending())?
     seq.stage_request()
@@ -32,7 +28,7 @@ fn test_seq_init(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
     bist.assert_float(name + " step initial sequence indicates DONE",
         0.0, 0.0, seq.step())
 
-    {   // check runtime of seq.loop() with empty list (should be 1.0 seconds)
+    {   // check runtime of seq.loop() with empty list
         const t0 = current_time()
         seq.loop()
         const dt = current_time() - t0
