@@ -49,7 +49,7 @@ impl Launch {
 
         if (self.mode != 1) {
             self.mode = 1
-            self.mode_ut = t }        
+            self.mode_ut = t }
 
         const dt = common.t0 - current_time()
         const countdown = ceiling(dt).to_int
@@ -60,7 +60,7 @@ impl Launch {
 
         if (dt > 0) {
             0.1 }
-        
+
         else {
             0.0 } }
 
@@ -88,11 +88,11 @@ impl Launch {
             common.t0 = t       // this is the REAL T-0 universal time.
             common.t_mgr.throttle = 1.0
             vessel.autopilot.enabled = true
-            vessel.autopilot.mode = MODE_STABILITYASSIST }        
+            vessel.autopilot.mode = MODE_STABILITYASSIST }
 
         if (vessel.altitude_sealevel < self.liftoff_done_alt) {
             0.1 }
-        
+
         else {
             0.0 } }
 
@@ -123,11 +123,10 @@ impl Launch {
             self.launch_thrust = mu * m / r2
 
             CONSOLE.print_line("awaiting launch") }
-        
 
         if (vessel.available_thrust <= self.launch_thrust) {
             0.1 }
-        
+
         else {
             0.0 } }
 

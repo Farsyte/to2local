@@ -19,7 +19,7 @@ mission phases in a way that allows them to be chunked
 together into simple "fire and forget" automation for all
 automatable aspects of a range of missions.
 
-*** implement and test the LOG package
+*** transfer and test the LOG package
 
 Building toward having a BIST package to make it easy to
 construct and run Build-In Self-Tests, which will need a
@@ -29,9 +29,7 @@ by calling code.
 The first step is the self-contained LOG package, and a
 minimial test of enough of it that BIST can be built.
 
-*** implement and test the BIST package
-
-**** BIST logging and log examination
+*** transfer and test the BIST package
 
 Without using the rest of the BIST facility, verify the
 entry points in a Bist that do logging things actually
@@ -40,9 +38,37 @@ store and make available the logged data.
 Once this is done, the remainder of the tests are free
 to make use of the logging parts of their bist object.
 
-**** BIST.assert_true(name, boolean)
-**** BIST.assert_false(name, boolean)
-**** BIST.assert_float(name, min_val, max_val, observed)
-**** BIST.assert_int(name, min_val, max_val, observed)
-**** BIST.assert_string(name, expected_string, observed_string)
+*** transfer and set up all_bist and tinker's usage of it
+
+One stop shop for running the BIST for each of the modules available
+from the FX library. Properly handles the idea that we need to test LOG
+without using BIST, then test BIST itself using an entry point that
+tests bits of it before using them, followed by running through the
+other pacakges in a reasonable order.
+
+The use of a final "bist.pass(name)" may or may not become
+the standard for methods that run other test methods; it might
+just be a redundant line. I already have a "bist.summary()" which
+generates a useful string but does not log it ...
+
+** 2023-04-13 mid day
+
+*** transfer and test the SCHEDULER package
+
+SCHEDULER does not seem to intersect with any changes in either KSP-2
+or KS2, so it largely arrives in the new collection unchanged.
+
+Added the missing self-test for the staging request flag.
+
+*** transfer and test the SEQUENCER package
+
+An intermediate constant is still needed for initializing structure
+fields of Option<T> type, as the type is not inferred when
+initializiong them to None().
+
+Prior version had not yet set up a BIST for the sequencer, so I added
+some simple tests of the "please stage" flag, sequential operation of
+a few steps, and proper repeating of an intermediate step. This checks
+the number of times each step is called, and the timing of the last
+call to the step.
 

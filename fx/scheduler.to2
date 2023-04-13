@@ -42,14 +42,12 @@ sync fn sch_insert(sch: Scheduler, node: SchTask) -> Unit = {
     node.next = t1.next
     t1.next = Some(node) }
 
-
 sync fn sch_remove(sch: Scheduler) -> Option<SchTask> = {
     // TODO prove we never remove the sentinel task, or prevent it.
     const result = sch.next
     if (result.defined)
         sch.next = result.value.next
     result }
-
 
 impl Scheduler {
     // Fundamental "vessel.staging.next()" call is ASYNC.
@@ -77,15 +75,12 @@ impl Scheduler {
         if (current_time() < self.next_when()) {
             return }
 
-
         const r : Option<SchTask> = sch_remove(self)
         if (!r.defined) {
             return }
 
-
         if (self.name != r.value.name) {
             self.name = r.value.name }
-
 
         // time may advance during this call.
         let dt = r.value.task()
@@ -129,4 +124,3 @@ struct SchTask(eta: float, name: string, task: fn() -> float) {
 
 sync fn make_last_sch_task() -> Option<SchTask> = {
     SchTask(NEVER, "never", fn() -> NEVER) }
-

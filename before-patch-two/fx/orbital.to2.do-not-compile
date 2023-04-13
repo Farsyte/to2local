@@ -87,13 +87,12 @@ impl Orbital {
                 const aerr = vessel.facing.vector.angle_to(dv)
                 const afrac = max(0.01, min(1, (5.0 - aerr) / 4.0))
 
-                afrac * lim_th
-            }) }        
+                afrac * lim_th }) }
 
         if (self.burn_dv.magnitude > 0.01) {
             // it is actually OK for us to not be ultra-fast at
             // noticing that the remaining DV is tiny.
-            return 1.0 }        
+            return 1.0 }
 
         common.t_mgr.throttle = 0.0
         vessel.autopilot.enabled = true
@@ -101,7 +100,7 @@ impl Orbital {
 
         CONSOLE.print_line("circularization complete")
 
-        0.0 }    
+        0.0 }
 
     // orbital.circ_ap(): circularize at apoapsis.
     // the next one, unless it is too soon, in which case do it

@@ -92,7 +92,6 @@ fn test_bist_log_quickly(name: string) -> BistResult = {
         CONSOLE.print_line("^^^^^ MANUAL CHECK REQUIRED ^^^^^")
         CONSOLE.print_line("") }
 
-
     if (bist.empty()) return Err(name + " FAIL: bist log empty, should have two lines")
     const l1 = bist.pop()
     if (!l1.defined) return Err(name + " FAIL: no l1")
@@ -189,5 +188,5 @@ fn test_bist(bist: Bist, name: string) -> BistResult = {
 
     bist.summary(name) }
 
-pub fn bist_test(bist: Bist) -> Result<Unit, string> = {
-    test_bist(bist, "bist")? }
+pub fn bist_test(bist: Bist) -> BistResult = {
+    test_bist(bist, "bist") }

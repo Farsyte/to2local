@@ -13,7 +13,6 @@ pub struct Common(vessel: Vessel) {
     launch_azimuth: float = 90.0
     launch_altitude: float = 80000.0
 
-
     t_mgr: ThrottleManager = vessel.manage_throttle(fn(dt) -> 0.0)
     //
     // ThrottleManager allows us to specify a throttle setting from 0 to 1,
@@ -45,10 +44,10 @@ impl Common {
 
     sync fn met(self) -> float = {
         current_time() - self.t0 }
-    
+
     sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Unit = {
         self.sequencer.run_at(eta, name, task) }
-    
+
     sync fn next_seq(self, task: fn() -> float) -> Unit = {
         self.sequencer.next_seq(task) }
 

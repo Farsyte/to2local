@@ -111,9 +111,9 @@ impl Bist {
         self }
 
     sync fn summary(self, name : string) -> BistResult = {
-        const nc : string = name + " completed "
+        const nc : string = name + ", have completed "
         const fc : string = self.fail_count.to_string() + " FAIL results"
-        const tc : string = self.test_count.to_string() + " test cases"
+        const tc : string = self.test_count.to_string() + " BIST cases"
         if (self.fail_count > 0) {
             Err(nc + tc + " with " + fc) }
         else {

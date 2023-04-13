@@ -14,8 +14,17 @@ fn test_sch_init(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     bist.assert_float(name + " never-task scheduled time", NEVER, NEVER, sch.next_when())?
     bist.assert_string(name + " never-task name", "never", sch.next_name())?
 
-    bist.summary(name) }
+    bist.assert_false(name + " stage_pending initially should be false", sch.stage_pending())?
+    sch.stage_request()
+    bist.assert_true(name + " stage_request sets stage_pending to TRUE", sch.stage_pending())?
+    sch.stage_request()
+    bist.assert_true(name + " stage_request is idempotent", sch.stage_pending())?
+    sch.stage_cancel()
+    bist.assert_false(name + " stage_cancel sets stage_pending to FALSE", sch.stage_pending())?
+    sch.stage_cancel()
+    bist.assert_false(name + " stage_cancel is idempotent", sch.stage_pending())?
 
+    bist.summary(name) }
 
 fn test_sch_once(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     const t0 = current_time()
@@ -39,7 +48,6 @@ fn test_sch_once(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     bist.assert_string(name + " once-task no longer pending", "never", sch.next_name())?
 
     bist.summary(name) }
-
 
 fn test_sch_twice(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     const t0 = current_time()
@@ -78,19 +86,18 @@ fn test_sch_twice(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
 
     bist.summary(name) }
 
-
 fn test_sch_fizzbuzz(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     const log : Log = Log()
 
-    sch.run_at(0.3, "fizz", fn() -> {
+    sch.run_at(0.06, "fizz", fn() -> {
         if (log.lines() > 4) return 0.0
         log.add("fizz")
-        0.3 })
+        0.06 })
 
-    sch.run_at(0.5, "buzz", fn() -> {
+    sch.run_at(0.10, "buzz", fn() -> {
         if (log.lines() > 4) return 0.0
         log.add("buzz")
-        0.5 })
+        0.10 })
 
     sch.loop()
 
@@ -101,7 +108,6 @@ fn test_sch_fizzbuzz(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     bist.assert_string(name + " log entry 5 ", "buzz", log.pop().value)
 
     bist.summary(name) }
-
 
 fn test_scheduler(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
 
@@ -121,6 +127,5 @@ fn test_scheduler(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
 
     bist.summary(name) }
 
-
-pub fn scheduler_bist(bist: Bist, vessel: Vessel) -> Result<Unit, string> = {
-    test_scheduler(bist, "scheduler", vessel)? }
+pub fn scheduler_bist(bist: Bist, vessel: Vessel) -> BistResult = {
+    test_scheduler(bist, "scheduler", vessel) }

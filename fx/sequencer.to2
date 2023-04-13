@@ -18,9 +18,9 @@ struct Node(task: fn() -> float) {
     task: fn() -> float = task
 }
 
-// oddity in KontrolSystem2 0.2.2 - 0.2.3
-// this initializer was not working:
+// KontrolSystem2 type inferrance fails on this kind of initialization:
 //    next: Option<Node> = None()
+
 const no_node : Option<Node> = None()
 
 impl Sequencer {
@@ -30,7 +30,7 @@ impl Sequencer {
     sync fn stage_cancel(self) -> Unit = { self.scheduler.stage_cancel() }
 
     sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Unit = {
-        self.scheduler.run_at(eta, name, task) }    
+        self.scheduler.run_at(eta, name, task) }
 
     sync fn next_seq(self, task: fn() -> float) -> Unit = {
         const nref : Option<Node> = Some(Node(task))
@@ -47,8 +47,8 @@ impl Sequencer {
     // task that will step through the main sequence.
 
     fn loop(self) -> Unit = {
-        self.run_at(1.0, "seq", fn () -> self.step())
-        self.scheduler.loop() }    
+        self.run_at(0.1, "seq", fn () -> self.step())
+        self.scheduler.loop() }
 
     // service function to execute a main sequence step.
     // curently the main sequence is a singlely-linked list

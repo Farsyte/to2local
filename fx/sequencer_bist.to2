@@ -1,0 +1,141 @@
+use { Vessel } from ksp::vessel
+use { CONSOLE } from ksp::console
+
+use { sleep, current_time } from ksp::game
+
+use { Log } from fx::log
+
+use { Bist, BistResult } from fx::bist
+
+use { Sequencer } from fx::sequencer
+
+fn test_seq_init(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
+//     bist.assert_true(name + " seq has initial NEVER task", seq.next.defined)?
+//     bist.assert_float(name + " never-task seqeduled time", NEVER, NEVER, seq.next_when())?
+//     bist.assert_string(name + " never-task name", "never", seq.next_name())?
+//
+
+    bist.assert_false(name + " stage_pending initially should be false", seq.stage_pending())?
+    seq.stage_request()
+    bist.assert_true(name + " stage_request sets stage_pending to TRUE", seq.stage_pending())?
+    seq.stage_request()
+    bist.assert_true(name + " stage_request is idempotent", seq.stage_pending())?
+    seq.stage_cancel()
+    bist.assert_false(name + " stage_cancel sets stage_pending to FALSE", seq.stage_pending())?
+    seq.stage_cancel()
+    bist.assert_false(name + " stage_cancel is idempotent", seq.stage_pending())?
+
+    // initially, there are no tasks in the main sequence, and attempting to
+    // execute the "next task" will return a zero indiating that the main
+    // sequence runner task does not need to be called again.
+
+    bist.assert_float(name + " step initial sequence indicates DONE",
+        0.0, 0.0, seq.step())
+
+    {   // check runtime of seq.loop() with empty list (should be 1.0 seconds)
+        const t0 = current_time()
+        seq.loop()
+        const dt = current_time() - t0
+        bist.assert_float(name + " seq.loop() of empty sequence returns promptly",
+            0.0, 5.0, dt) }
+
+    bist.summary(name) }
+
+struct Visited(name: string, repeats : int = 0) {
+    name : string = name
+    repeats: int = repeats
+    count : int = 0
+    when : float = 0.0
+}
+
+impl Visited {
+    sync fn visit(self) -> float = {
+        self.count = self.count + 1
+        self.when = current_time()
+        if (self.count > self.repeats) -0.1 else 0.1 }
+}
+
+fn test_seq_once(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
+    // verify operation of sequencer executing three tasks, once each.
+
+    const t0 : float = current_time()
+
+    const task0 : Visited = Visited("task0")
+    const task1 : Visited = Visited("task1")
+    const task2 : Visited = Visited("task2")
+    const task3 : Visited = Visited("task3")
+
+    seq.next_seq(fn() -> task1.visit())
+    seq.next_seq(fn() -> task2.visit())
+    seq.next_seq(fn() -> task3.visit())
+
+    seq.loop()
+    task0.visit()
+
+    bist.assert_float(name + " seq.loop() for test_seq_once ran in good time",
+        0.0 + t0, 10.0 + t0, task0.when)
+
+    bist.assert_int(name + " seq ran task1 exactly once",
+        1, 1, task1.count)
+    bist.assert_int(name + " seq ran task2 exactly once",
+        1, 1, task2.count)
+    bist.assert_int(name + " seq ran task3 exactly once",
+        1, 1, task3.count)
+
+    bist.assert_float(name + " seq ran task1 at the right time",
+        0.0 + t0, 5.0 + t0, task1.when)
+    bist.assert_float(name + " seq ran task2 at the right time",
+        0.05 + task1.when, 0.15 + task1.when, task2.when)
+    bist.assert_float(name + " seq ran task3 at the right time",
+        0.05 + task2.when, 0.15 + task2.when, task3.when)
+
+     bist.summary(name) }
+
+fn test_seq_repeats(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
+    // verify operation of sequencer executing three tasks, once each.
+
+    const t0 : float = current_time()
+
+    const task0 : Visited = Visited("task0")
+    const task1 : Visited = Visited("task1")
+    const task2 : Visited = Visited("task2", 9)
+    const task3 : Visited = Visited("task3")
+
+    seq.next_seq(fn() -> task1.visit())
+    seq.next_seq(fn() -> task2.visit())
+    seq.next_seq(fn() -> task3.visit())
+
+    seq.loop()
+    task0.visit()
+
+    bist.assert_float(name + " seq.loop() for test_seq_once ran in good time",
+        0.0 + t0, 10.0 + t0, task0.when)
+
+    bist.assert_int(name + " seq ran task1 exactly once",
+        1, 1, task1.count)
+    bist.assert_int(name + " seq ran task2 exactly ten times",
+        10, 10, task2.count)
+    bist.assert_int(name + " seq ran task3 exactly once",
+        1, 1, task3.count)
+
+    bist.assert_float(name + " seq ran task1 at the right time",
+        0.0 + t0, 5.0 + t0, task1.when)
+    bist.assert_float(name + " seq ran task2 for the last time at the right time",
+        1.05 + task1.when, 1.25 + task1.when, task2.when)
+    bist.assert_float(name + " seq ran task3 at the right time",
+        0.05 + task2.when, 0.15 + task2.when, task3.when)
+
+     bist.summary(name) }
+
+fn test_sequencer(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
+
+    const seq = Sequencer(vessel)
+
+    test_seq_init(bist, name + " init", seq)?
+    test_seq_once(bist, name + " once", seq)?
+    test_seq_repeats(bist, name + " ten times", seq)?
+
+    bist.summary(name) }
+
+pub fn sequencer_bist(bist: Bist, vessel: Vessel) -> BistResult = {
+    test_sequencer(bist, "sequencer", vessel) }

@@ -4,11 +4,11 @@ use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
 
 use { Bist, BistResult } from fx::bist
-use { all_test } from fx::all_bist
+use { all_test, report } from fx::all_bist
 
 fn tinker_bist(vessel: Vessel) -> BistResult = {
     CONSOLE.print_line("")
-    CONSOLE.print_line("Running ALL_BIST before staring ...")
+    CONSOLE.print_line("Running ALL_BIST before starting ...")
 
     const bist = Bist()
     const name = "all_test"
@@ -16,10 +16,10 @@ fn tinker_bist(vessel: Vessel) -> BistResult = {
 
     if (!result.success) {
         bist.add_fail_head(name, result.error)
-            .add_fail_tail(name) }
+            .add_fail_tail(name)
+        bist.print() }
 
-    bist.print()
-    result }
+    report(result) }
 
 pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
     CONSOLE.clear()

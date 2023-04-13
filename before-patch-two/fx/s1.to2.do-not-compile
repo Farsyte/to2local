@@ -31,7 +31,7 @@ impl S1state {
         // but only to synchronous functions.
         //
         CONSOLE.print_line("s1state.s1_sync")
-        round(200.0 * dt) / 100.0 }    
+        round(200.0 * dt) / 100.0 }
 
     fn s1_async(self, dt: float) -> float = {
         // This is the less common form the functions that are used
@@ -45,20 +45,20 @@ impl S1state {
         //
         CONSOLE.print_line("s1state.s1_async")
         if (dt < 0) self.vessel.staging.next()
-        round(200.0 * dt) / 100.0 }    
+        round(200.0 * dt) / 100.0 }
 
     fn run_it_with_s1(self, dt: float, task: fn(S1state, float) -> float) -> float = {
         CONSOLE.print_line("s1state.run_it_with_s1")
         let result = task(self, dt)
         CONSOLE.print_line("s1state.run_it_with_s1 result is " + result.to_string())
         return result }
-    
+
     fn run_it_without_s1(self, dt: float, task: fn(float) -> float) -> float = {
         CONSOLE.print_line("s1state.run_it_without_s1")
         let result = task(dt)
         CONSOLE.print_line("s1state.run_it_without_s1 result is " + result.to_string())
         return result }
-    
+
     fn run(self) -> float = {
 
         let dt = 0.17

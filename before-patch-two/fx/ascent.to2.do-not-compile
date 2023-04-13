@@ -42,7 +42,7 @@ impl Ascent {
             common.t_mgr.throttle = 0.0
             vessel.autopilot.enabled = true
             vessel.autopilot.mode = MODE_PROGRADE
-            return 0.0 }        
+            return 0.0 }
 
         if (self.mode != 3) {
             self.mode = 3
@@ -59,7 +59,7 @@ impl Ascent {
 
             common.t_mgr.throttle = 1.0
             vessel.autopilot.enabled = true
-            vessel.autopilot.mode = MODE_AUTOPILOT }        
+            vessel.autopilot.mode = MODE_AUTOPILOT }
 
         const atm_frac = (vessel.altitude_sealevel - self.alt_min) / (self.alt_max - self.alt_min)
         const atm_clip = max(0, min(1, atm_frac))
@@ -80,7 +80,7 @@ impl Ascent {
         // executed by the throttle manager. How do we feel
         // about doing all of the above faster than 10 Hz?
 
-        0.1 }    
+        0.1 }
 
     // ascent.spacecoast: unpowered ascent from mid-atmosphere to space
     sync fn spacecoast(self) -> float = {
@@ -98,12 +98,12 @@ impl Ascent {
 
             // Hmmm. I don't see how to switch between
             // Surface Prograde and Orbital Prograde.
-            vessel.autopilot.mode = MODE_PROGRADE }        
+            vessel.autopilot.mode = MODE_PROGRADE }
 
         if (vessel.altitude_sealevel <= vessel.main_body.atmosphere_depth) {
             0.1 }
-        
-        else { 
+
+        else {
             0.0 } }
 
 }
