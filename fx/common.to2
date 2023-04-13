@@ -19,6 +19,9 @@ impl Common {
     sync fn set_throttle_value(self, value: float) -> Common = {
         self.sequencer.set_throttle_value(value)
         self }
+    sync fn set_throttle_provider(self, provider: fn(float) -> float) -> Common = {
+        self.sequencer.set_throttle_provider(provider)
+        self }
 
     // proxy the stage_{pending,request,cancel} API through to sequencer,
     // so that code using Common does not need to know who is actually

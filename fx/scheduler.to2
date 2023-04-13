@@ -72,11 +72,15 @@ sync fn sch_remove(sch: Scheduler) -> Option<SchTask> = {
 impl Scheduler {
 
     // intercept throttle manipulations.
+    // Not really doing much with this yet as staging can use
+    // the release/resume mechanism, but this allows me to be
+    // more flexible in the near future, which I think I am
+    // going to need.
     sync fn set_throttle_value(self, value: float) -> Scheduler = {
         self.t_mgr.throttle = value
         self }
-    sync fn set_throttle_func(self, tmgr: fn(float) -> float) -> Scheduler = {
-        self.t_mgr.set_throttle_provider(tmgr)
+    sync fn set_throttle_provider(self, provider: fn(float) -> float) -> Scheduler = {
+        self.t_mgr.set_throttle_provider(provider)
         self }
 
     // Fundamental "vessel.staging.next()" call is ASYNC.

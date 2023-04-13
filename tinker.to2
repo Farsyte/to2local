@@ -12,7 +12,7 @@ use { Common } from fx::common
 use { Stager } from fx::stager
 use { Launch } from fx::launch
 use { Ascent } from fx::ascent
-// use { Orbital } from fx::orbital
+use { Orbital } from fx::orbital
 
 pub struct TinkerMission(common: Common) {
     common : Common = common
@@ -21,13 +21,12 @@ pub struct TinkerMission(common: Common) {
     stager : Stager = Stager(common)
     launch : Launch = Launch(common)
     ascent : Ascent = Ascent(common)
-    // orbital : Orbital = Orbital(common)
+    orbital : Orbital = Orbital(common)
 }
 
 impl TinkerMission {
 
     fn go(self) -> TinkerMission = {
-
         self.load_seq()
             .start_bg()
             .loop()
@@ -41,11 +40,13 @@ impl TinkerMission {
         //    Type fx::launch::Launch does not have a field 'manual'
 
         self
+             .next_seq(fn () -> self.atmoprep())
              .next_seq(fn () -> self.launch.manual())
              .next_seq(fn () -> self.launch.liftoff())
              .next_seq(fn () -> self.ascent.gravityturn())
              .next_seq(fn () -> self.ascent.spacecoast())
-        //     .next_seq(fn () -> self.orbital.circ_ap())
+             .next_seq(fn () -> self.spaceprep())
+             .next_seq(fn () -> self.orbital.circ_ap())
 
         self.next_seq(fn () -> self.keep_flying()) }
 
@@ -53,6 +54,22 @@ impl TinkerMission {
         CONSOLE.print_line("adding stage_check to the schedule")
         self.run_at(1.0, "stage", fn () -> self.stager.stage_check())
         self }
+
+    sync fn atmoprep(self) -> float = {
+        CONSOLE.print_line("deactivate rcs, light, and solar panels.")
+        self.vessel.actions.gear = false
+        self.vessel.actions.light = false
+        self.vessel.actions.rcs = false
+        self.vessel.actions.solar_panels = false
+        0.0 }
+
+    sync fn spaceprep(self) -> float = {
+        CONSOLE.print_line("activate rcs, light, and solar panels.")
+        self.vessel.actions.gear = false
+        self.vessel.actions.light = true
+        self.vessel.actions.rcs = true
+        self.vessel.actions.solar_panels = true
+        0.0 }
 
     sync fn keep_flying(self) -> float = {
         CONSOLE.print_line("at bottom of mission plan.")

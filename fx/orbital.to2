@@ -5,7 +5,7 @@ use { sqrt, max, min, round } from core::math
 use { Vec3, vec3 } from ksp::math
 use { CONSOLE } from ksp::console
 use { current_time } from ksp::game
-use { Vessel, MODE_PROGRADE, MODE_AUTOPILOT } from ksp::vessel
+use { Vessel, AutopilotMode } from ksp::vessel
 
 use { Common } from fx::common
 
@@ -22,6 +22,8 @@ pub struct Orbital(common: Common) {
 
     burn_ut : float = 0.0
     burn_dv : Vec3 = vec3(0,0,0)
+
+    circ_continue : bool = false
 }
 
 impl Orbital {
@@ -66,37 +68,41 @@ impl Orbital {
         if (self.mode != 1) {
             self.mode = 1
             self.mode_met = met
+            self.circ_continue = true
 
             self.burn_dv = self.circ_dv()
-            vessel.autopilot.mode = MODE_AUTOPILOT
+            vessel.autopilot.mode = AutopilotMode.Autopilot
             vessel.autopilot.target_orientation = self.burn_dv
 
-            common.t_mgr.set_throttle_provider(fn (dt) -> {
+            common.set_throttle_provider(fn (dt) -> {
                 const dv = self.circ_dv()
 
                 self.burn_dv = dv
 
                 vessel.autopilot.target_orientation = dv
 
-                if (current_time() < self.burn_ut) return 0.0
+                if (current_time() < self.burn_ut) {
+                    return 0.0 }
 
                 const max_th = max(1.0, vessel.available_thrust)
                 const cmd_th = dv.magnitude * vessel.mass / max_th
                 const lim_th = max(0.0, min(1.0, cmd_th))
 
+                if (lim_th < 0.01)
+                    self.circ_continue = false
+
                 const aerr = vessel.facing.vector.angle_to(dv)
                 const afrac = max(0.01, min(1, (5.0 - aerr) / 4.0))
 
-                afrac * lim_th }) }
+                afrac * lim_th })
+        }
 
-        if (self.burn_dv.magnitude > 0.01) {
-            // it is actually OK for us to not be ultra-fast at
-            // noticing that the remaining DV is tiny.
+        if (self.circ_continue) {
             return 1.0 }
 
-        common.t_mgr.throttle = 0.0
+        common.set_throttle_value(0.0)
         vessel.autopilot.enabled = true
-        vessel.autopilot.mode = MODE_PROGRADE
+        vessel.autopilot.mode = AutopilotMode.Prograde
 
         CONSOLE.print_line("circularization complete")
 

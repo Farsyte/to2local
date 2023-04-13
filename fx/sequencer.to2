@@ -26,6 +26,9 @@ const no_node : Option<Node> = None()
 impl Sequencer {
 
     // proxy the throttle manipulations.
+    sync fn set_throttle_provider(self, provider: fn(float) -> float) -> Sequencer = {
+        self.scheduler.set_throttle_provider(provider)
+        self }
     sync fn set_throttle_value(self, value: float) -> Sequencer = {
         self.scheduler.set_throttle_value(value)
         self }
