@@ -127,14 +127,14 @@ fn test_hill_run(bist: Bist, name: string, hill: Hill) -> BistResult = {
 
     // the test hill is very very well behavied.
     // we should snap to the precise solution
-    // after 144 evaluations.
+    // after 84 evaluations.
     //
     // numbers come out exact because all of our
     // inputs are multiples of 0.25 so we are always
     // working with FP numbers that have only a few
     // bits set near the top of the significand.
 
-    bist.assert_int(name + " steps across the test hill", 144, 144, count)
+    bist.assert_int(name + " steps across the test hill", 84, 84, count)
     const (sF, dF) = hill.best()
     bist.assert_float(name + " sF", 0.0, 0.0, sF)
     bist.assert_float(name + " dF[0]", 1.0, 1.0, dF[0])

@@ -77,11 +77,11 @@ impl Hill {
     // return None if step size is already tiny
     sync fn curr(self) -> Option<float[]> = {
         if (!self.more()) {
+            if (self.go_smaller)
+                self.step_size *= self.step_fact
             if (self.step_size <= self.step_tiny)
                 return None()
             self.near()
-            if (self.go_smaller)
-                self.step_size *= self.step_fact
             self.go_smaller = true }
         self.pend.value.data }
 
