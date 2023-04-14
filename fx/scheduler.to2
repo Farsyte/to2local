@@ -1,3 +1,5 @@
+// SCHEDULER: run tasks after a specified time
+
 use { round } from core::math
 
 use { Vessel } from ksp::vessel
@@ -6,103 +8,203 @@ use { CONSOLE } from ksp::console
 
 use { yield, sleep, current_time } from ksp::game
 
+// The unit of work in this sytem is a Task,
+// which is a function taking no parameters
+// that returns a float.
+//
+// The semantics of the return value is that
+// a positive return means "call me again after
+// at least this time has elapsed" while zero or
+// negative values are not a request to call again.
+
+pub type Task = fn() -> float
+
+// TaskNode carries the bookkeeping for a task that
+// is scheduled to be called. It includes the task
+// itself, a name for printing, the universal time
+// after which the task should execute, and a link
+// to the next task, that can be NO_TASK.
+
+struct TaskNode(eta: float, name: string, task: Task) {
+    next : TaskNodeRef = NO_TASK
+    when : float = eta + current_time()
+    name : string = name
+    task : Task = task }
+
+// References to TaskNode, that might be NO_TASK, use the
+// TaskNodeRef data type. Provide a type name for
+// this alias to keep usage of it a bit cleaner, and
+// to encapsulate the decision to use Option in just
+// this one place.
+
+pub type TaskNodeRef = Option<TaskNode>
+
+// Provide a constant representing "No Task"
+// Note that as of KontrolSystem2 0.3.3, it is not
+// possible to use None() in an initializer:
+//     next: Option<TaskNode> = None()
+// this is a good second reason to provide NO_TASK.
+
+const NO_TASK : TaskNodeRef = None()
+
+// Scheduling needs a value to store in time thresholds
+// that can be recognized as NEVER being reached. I find
+// it useful to use IEEE 754 "Inf" values for this,
+// because NEVER plus or minus any finite value compares
+// equal to NEVER.
+
+pub const NEVER : float = 1.0 / 0.0         // yes, Infinity.
+
+// If we allow the queue of scheduled tasks to ever be
+// completely empty, we have to set up our queue handling
+// code to handle that case. If we assure there is always
+// a sentinel node present, the code is simpler.
+//
+// The make_last_sch_task function constructs a task that
+// will naturally live at the far future end of the list
+// and will never naturally be executeed.
+
+sync fn make_last_sch_task() -> TaskNodeRef = {
+    TaskNode(NEVER, "never", fn() -> NEVER) }
+
+// The scheduler itself carries all of the bookkeeping
+// to maintain a collection of pending tasks in a way that
+// allows us to efficiently execute them.
+//
+// ...
+//
+// But things get weird.
+//
+// Control will arrive in our scheduler loop, which will
+// issue calls to Tasks. These are limited to SYNC functions,
+// so there are certain things that can not be done.
+//
+// This means that either we provide those services here, or
+// we provide dispatch services to someone else who does so
+// via methods not limited to SYNC functions.
+//
+// STAGING: this is the first thing we want to do in our system
+// that requires making a call to an ASYNC function. Working out
+// when to stage is done in SYNC functions, but the actual process
+// of staging is handled here.
+//
+// THROTTLE: After much tinkering, I decided to include Throttle
+// Dipping during staging: throttle to zero, then stage, then
+// resume the existing throttle control. To make this work, the
+// actual throttle manager is pulled down to the Scheduler.
+//
+// THROTTLE DIPPING will be discussed where it occurs.
+
 pub struct Scheduler(vessel: Vessel) {
     vessel : Vessel = vessel
 
     pend_stage : bool = false
 
-    next : Option<SchTask> = make_last_sch_task()
+    next : TaskNodeRef = make_last_sch_task()
     name : string = ""
 
     t_mgr: ThrottleManager = vessel.manage_throttle(fn(dt) -> 0.0)
+
     time_dostage: float = NEVER
     time_rethrottle: float = NEVER
-    //
-    // ThrottleManager allows us to specify a throttle setting from 0 to 1,
-    // were 0 is all engines cut and 1 is all engines full.
-    //
-    // things we can do with t_mgr:
-    //
-    //   t_mgr.throttle = 0
-    //   let curr = t_mgr.throttle
-    //
-    //   t_mgr.set_throttle_provider(fn (float) -> float)
-    //   t_mgr.release()
-    //   t_mgr.resume()
 }
 
-// sch_insert(sch, node): insert a node into the schedule.
-// only sch_insert and sch_remove care that the schedule
-// is a singlely-linked list in nondescending scheduled time
-// with a sentinal task at the end whose WHEN key is NEVER.
-sync fn sch_insert(sch: Scheduler, node: SchTask) -> Scheduler = {
+// sch_insert is the internal function that inserts a TaskNode
+// into the collection of tasks to be executed.
+//
+// Currently, the collection of scheduled tasks is a single-linked
+// list arranged in ascending time order. However, code outside
+// the sch_insert and sch_remove methods should not depend on this
+// implementation detail.
 
-    if (!sch.next.defined) {
-        // safety net (should never happen)
-        sch.next = Some(node)
-        return sch }
+sync fn sch_insert(sch: Scheduler, node: TaskNode) -> Scheduler = {
+
+    // Ignore any requst to schedule a task for NEVER.
+    // This is an error. Note that the sentinel task, which is
+    // scheduled for NEVER, is not set up with this function.
+
+    if (node.when == NEVER)
+        return sch
+
+    // The scheduled task list has a sentinel that never goes away.
+    // if (!sch.next.defined) {
+    //     sch.next = Some(node)
+    //     return sch }
+
+    // It is quite common for the task being scheduled to
+    // be sooner than anything on the list, which is also a
+    // simple case to handle.
 
     if (node.when < sch.next.value.when) {
-        // expected common case: inserting at the head of the list
         node.next = sch.next
         sch.next = Some(node)
         return sch }
 
-    // insert into the list after all nodes
-    // whose scheduled times are earlier or the same.
-    // TODO optimize for guaranteed presence of sentinel task
+    // The new task goes somewhere down the list.
+    //
+    // Scan T1 down the list to find the first T1
+    // node whose NEXT node is after the new task,
+    // then insert the new task after T1.
+    //
+    // This code takes advantage of the knowledge that it
+    // will never advance t1 to the sentinel task, and
+    // thus t1.next will always have a defined value.
+
     let t1 = sch.next.value
-    while (t1.next.defined) {
-        let t2 = t1.next.value
-        if (node.when < t2.when) {
-            break }
-        t1 = t2 }
+    while (node.when >= t1.next.value.when)
+        t1 = t1.next.value
 
     node.next = t1.next
     t1.next = Some(node)
+
     sch }
 
-sync fn sch_remove(sch: Scheduler) -> Option<SchTask> = {
-    // TODO prove we never remove the sentinel task, or prevent it.
+// sch_remove is the internal function that removes the next
+// task to be executed from the list of pending tasks.
+//
+// We will never be asked to remove the sentinel task, so we
+// will never leave sch.next undefined, and thus we never have
+// to worry about sch.next being undefined.
+//
+// Currently, the collection of scheduled tasks is a single-linked
+// list arranged in ascending time order. However, code outside
+// the sch_insert and sch_remove methods should not depend on this
+// implementation detail.
+
+sync fn sch_remove(sch: Scheduler) -> TaskNodeRef = {
     const result = sch.next
-    if (result.defined)
-        sch.next = result.value.next
+    sch.next = result.value.next
     result }
 
 impl Scheduler {
 
-    // intercept throttle manipulations.
-    // Not really doing much with this yet as staging can use
-    // the release/resume mechanism, but this allows me to be
-    // more flexible in the near future, which I think I am
-    // going to need.
-    sync fn set_throttle_value(self, value: float) -> Scheduler = {
-        self.t_mgr.throttle = value
-        self }
-    sync fn set_throttle_provider(self, provider: fn(float) -> float) -> Scheduler = {
-        self.t_mgr.set_throttle_provider(provider)
+    // scheduler.run_at(eta,name,task): in no less than eta seconds, run task.
+    // This function should be called by any code -- mission or
+    // infrastructure -- that needs to establish code to run at
+    // a specific time (with the understanding that the code can
+    // ask to be run again and again).
+    sync fn run_at(self, eta: float, name: string, task: Task) -> Scheduler = {
+        sch_insert(self, TaskNode(eta, name, task))
         self }
 
-    // Fundamental "vessel.staging.next()" call is ASYNC.
-    // provide simple sync fn stage_{pending,request,cancel}
-    // to indicate when staging is (or is not) desired.
-    sync fn stage_pending(self) -> bool = { self.pend_stage }
-    sync fn stage_request(self) -> Scheduler = {
-        self.pend_stage = true
-        self }
-    sync fn stage_cancel(self) -> Scheduler = {
-        self.pend_stage = false
-        self }
+    // scheduler.loop(): Pass control to the Scheduler.
+    //
+    // This function enters a loop where it alternately checks
+    // for a scheduled task that is due, and checks for any
+    // ASYNC facilities that need to be triggered. YIELD is used
+    // within this loop to allow time to pass, just in case we
+    // manage to get through the SYNC and ASYNC work without
+    // ever doing a yield or a sleep.
+    //
+    // This method returns if there are no real tasks remaining
+    // on the queue (that is, if the next task is scheduled to
+    // execute NEVER).
 
-    // simple sync fn next_{when,name,task} to examine the next task.
-    sync fn next_when(self) -> float = { self.next.value.when }
-    sync fn next_name(self) -> string = { self.next.value.name }
-    sync fn next_task(self) -> fn() -> float = { self.next.value.task }
-
-    // run_at(eta,name,task): in no less than eta seconds, run task.
-    // name string stored for debug, status monitor, and logging (TBD).
-    sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Scheduler = {
-        sch_insert(self, SchTask(eta, name, task))
+    fn loop(self) -> Scheduler = {
+        while (self.next_when() < NEVER) {
+            self.step()
+            self.async()
+            yield() }
         self }
 
     sync fn step(self) -> Scheduler = {
@@ -110,24 +212,49 @@ impl Scheduler {
         // This check also assures that we will never attempt to
         // remove an existing sentinel task (and thus never attempt
         // to re-insert it after removal).
+
         if (current_time() < self.next_when()) {
+
+            // open for extension: we could decide to sleep
+            // for a bit, if it is important to conserve
+            // host CPU cycles. Would not want to sleep longer
+            // than the ETA of the next task, and probably would
+            // not want to sleep for a long time in any case.
+            //
+            // It is not entirely clear whether sleeping would be
+            // done here, or should be done in the calling loop.
+
             return self }
 
-        const r : Option<SchTask> = sch_remove(self)
-        if (!r.defined) {
-            return self }
+        // Since we will never ever pop the NEVER task off the list,
+        // we can absolutely trust that the result is defined.
 
-        if (self.name != r.value.name) {
-            self.name = r.value.name }
+        const r : TaskNode = sch_remove(self).value
 
-        // time may advance during this call.
-        let dt = r.value.task()
+        if (self.name != r.name) {
+
+            // open for extension: this is where we could log,
+            // print, or otherwise display the current task name.
+
+            self.name = r.name }
+
+        // Execute the task. Assume that this might extend across
+        // one or more physical tick boundaries.
+
+        let dt = r.task()
 
         if (dt > 0.0) {
-            r.value.when = current_time() + dt
-            sch_insert(self, r.value) }
+
+            // A positive return value means "call me again
+            // after at least this much time" -- the dt is a
+            // gap elapsed time, not a task period.
+
+            r.when = current_time() + dt
+            sch_insert(self, r) }
 
         self }
+
+    // scheduler.async(): manage async services.ws
 
     fn async(self) -> Scheduler = {
 
@@ -145,12 +272,26 @@ impl Scheduler {
                 self.stage_cancel()
                 return self }
 
+            // Before we stage, DIP the throttle. That is,
+            // we release the throttle manager (which puts
+            // the throttle under manual conrol, not really
+            // forcing it to zero, but good FOR NOW).
+            //
+            // The time_dostage field tracks when we want to
+            // perform the staging; it is NEVER at the start,
+            // we set it to a short delay after dipping the
+            // throttle and it will be put back to NEVER later.
+
             if (self.time_dostage == NEVER) {
                 self.t_mgr.release()
                 self.time_dostage = t + 0.5
                 self.time_rethrottle = t + 1.0 }
 
-            if (t > self.time_dostage) {
+            // Once time has advanced a bit, we actually trigger
+            // staging, reset the request flag, reset the staging
+            // time schedule, and set a time to restore throttle.
+
+            if (t >= self.time_dostage) {
                 // The call to KSP to trigger staging is ASYNC.
                 self.vessel.staging.next()
                 self.stage_cancel()
@@ -158,7 +299,13 @@ impl Scheduler {
                 self.time_rethrottle = t + 0.5 } }
 
         else {
+            // if the request is cancelled, make sure the time
+            // to stage is set back to NEVER.
             self.time_dostage = NEVER }
+
+        // If the throttle is dipped, and we reach time time to
+        // restore it, resume control, and set the restore time
+        // back to NEVER.
 
         if (t >= self.time_rethrottle) {
             self.t_mgr.resume()
@@ -166,32 +313,84 @@ impl Scheduler {
 
         self }
 
-    fn loop(self) -> Scheduler = {
-        while (self.next_when() < NEVER) {
-            self.step()
-            self.async()
+    // Return the scheduled execution time of the next task.
+    // This returns NEVER, if there are no tasks scheduled to
+    // be executed in a finite time.
+    //
+    // This is simple because we know the sentinal task exists
+    // and thus self.next is always defined. The callers should
+    // make the call and not inline it because they do not get
+    // to know that implementation detail.
 
-            // open for extension: we could decide to sleep
-            // for a bit, if it is important to conserve
-            // host CPU cycles. Would not want to sleep longer
-            // than the ETA of the next task, and probably would
-            // not want to sleep for a long time in any case.
+    sync fn next_when(self) -> float = { self.next.value.when }
 
-            yield() }
+    // Return the printable name of the next task.
+    // Note that the name of the sentinel task is "never"
+    //
+    // This is simple because we know the sentinal task exists
+    // and thus self.next is always defined. The callers should
+    // make the call and not inline it because they do not get
+    // to know that implementation detail.
+
+    sync fn next_name(self) -> string = { self.next.value.name }
+
+    // Return the next Task to be executed.
+    // Note that the sentinel task just returns NEVER but that
+    // is not important because it should be executed NEVER.
+    //
+    // This is simple because we know the sentinal task exists
+    // and thus self.next is always defined. The callers should
+    // make the call and not inline it because they do not get
+    // to know that implementation detail.
+
+    sync fn next_task(self) -> Task = { self.next.value.task }
+
+    // Set the throttle to a constant value.
+    //
+    // All throttle management should be routed through
+    // the Scheduler (this allows us to have choices in how
+    // we implement Throttle Ducking during staging).
+
+    sync fn set_throttle_value(self, value: float) -> Scheduler = {
+        self.t_mgr.throttle = value
         self }
+
+    // Set the throttle to a lazy-computed value.
+    //
+    // All throttle management should be routed through
+    // the Scheduler (this allows us to have choices in how
+    // we implement Throttle Ducking during staging).
+
+    sync fn set_throttle_provider(self, provider: fn(float) -> float) -> Scheduler = {
+        self.t_mgr.set_throttle_provider(provider)
+        self }
+
+    // Request the execution of a staging event.
+    //
+    // This function is how a SYNC function arranges for a
+    // staging event to occur, when staging itself is an ASYNC
+    // call to the vessel management facility.
+
+    sync fn stage_request(self) -> Scheduler = {
+        self.pend_stage = true
+        self }
+
+    // Test to see if a task has requested staging.
+    //
+    // This can be done by anyone, but most importantly it is done
+    // in the scheduler loop to determine if we need to trigger
+    // the actual ASYNC staging trigger.
+
+    sync fn stage_pending(self) -> bool = { self.pend_stage }
+
+    // Cancel the requested staging event.
+    //
+    // This can be used by SYNC tasks to cancel staging, but most
+    // importantly it is done by the code doing the staging when
+    // the staging has been done.
+
+    sync fn stage_cancel(self) -> Scheduler = {
+        self.pend_stage = false
+        self }
+
 }
-
-pub const NEVER : float = 1.0 / 0.0         // yes, Infinity.
-
-// KontrolSystem2 type inferrance fails on this kind of initialization:
-//    next: Option<SchTask> = None()
-const noSchTaskRef : Option<SchTask> = None()
-
-struct SchTask(eta: float, name: string, task: fn() -> float) {
-    next : Option<SchTask> = noSchTaskRef
-    when : float = eta + current_time()
-    name : string = name
-    task : fn() -> float = task }
-
-sync fn make_last_sch_task() -> Option<SchTask> = {
-    SchTask(NEVER, "never", fn() -> NEVER) }
