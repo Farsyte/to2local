@@ -1,0 +1,35 @@
+use { CONSOLE } from ksp::console
+use { Vessel } from ksp::vessel
+
+use { Bist, BistResult, report } from fx::bist
+
+use { test_log } from tx::log_bist
+use { test_bist } from tx::bist_bist
+use { test_hill } from tx::hill_bist
+use { test_scheduler } from tx::scheduler_bist
+use { test_sequencer } from tx::sequencer_bist
+use { test_common } from tx::common_bist
+
+const name : string = "all"
+
+pub fn all_test(bist: Bist, vessel: Vessel) -> BistResult = {
+    report(test_log())?
+    report(test_bist(bist))?
+    report(test_hill(bist))?
+    report(test_scheduler(bist, vessel))?
+    report(test_sequencer(bist, vessel))?
+    report(test_common(bist, vessel))?
+    bist.summary(name) }
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.print_line("testing " + name + " ...")
+
+    const bist = Bist()
+    const result = all_test(bist, vessel)
+
+    if (!result.success) {
+        bist.add_fail_head(name, result.error)
+            .add_fail_tail(name)
+        bist.print() }
+
+    report(result)? }

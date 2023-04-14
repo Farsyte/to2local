@@ -1,13 +1,10 @@
 use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
-
 use { sleep, current_time } from ksp::game
 
 use { Log } from fx::log
-
-use { Bist, BistResult } from fx::bist
-
 use { Common } from fx::common
+use { Bist, BistResult, report } from fx::bist
 
 fn test_common_init(bist: Bist, name: string, common: Common) -> BistResult = {
     const t0 = current_time()
@@ -99,7 +96,13 @@ fn test_common_seq(bist: Bist, name: string, common: Common) -> BistResult = {
 
     bist.summary(name) }
 
-fn test_common(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
+// provide the "fx::test_common" public method that is called
+// by this file, by all_bist, and by any mission scripts that
+// want to assure COMMON is not broken before they run.
+
+const name : string = "common"
+
+pub fn test_common(bist: Bist, vessel: Vessel) -> BistResult = {
 
     const common = Common(vessel)
     test_common_init(bist, name + " init", common)?
@@ -107,5 +110,17 @@ fn test_common(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
 
     bist.summary(name) }
 
-pub fn common_bist(bist: Bist, vessel: Vessel) -> BistResult = {
-    test_common(bist, "common", vessel) }
+// proivide the "fx::test::common_bist::main_flight" entry point
+// that runs just the COMMON tests.
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.print_line("testing " + name + " ...")
+
+    const bist = Bist()
+    const result = test_common(bist, vessel)
+
+    if (!result.success) {
+        bist.add_fail_head(name, result.error)
+            .add_fail_tail(name)
+        bist.print() }
+    report(result)? }

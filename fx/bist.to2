@@ -16,6 +16,13 @@ pub struct Bist() {
     log : Log = Log()
 }
 
+pub fn report(result: BistResult) -> BistResult = {
+    if (result.success) {
+        CONSOLE.print_line("PASS: " + result.value) }
+    else {
+        CONSOLE.print_line("FAIL: " + result.error) }
+    result }
+
 impl Bist {
 
     sync fn assert_true(self, name : string, observed : bool) -> BistResult = {

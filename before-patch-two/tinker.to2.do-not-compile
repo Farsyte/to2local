@@ -14,7 +14,7 @@ use { Stager } from fx::stager
 use { Orbital } from fx::orbital
 
 use { Bist } from fx::bist
-use { all_test } from fx::all_bist
+use { all_test } from tx::all_bist
 
 pub struct TinkerMission(common: Common) {
     common : Common = common

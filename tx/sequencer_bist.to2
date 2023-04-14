@@ -1,13 +1,10 @@
 use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
-
 use { sleep, current_time } from ksp::game
 
 use { Log } from fx::log
-
-use { Bist, BistResult } from fx::bist
-
 use { Sequencer } from fx::sequencer
+use { Bist, BistResult, report } from fx::bist
 
 fn test_seq_init(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
 
@@ -125,7 +122,13 @@ fn test_seq_repeats(bist: Bist, name: string, seq: Sequencer) -> BistResult = {
 
      bist.summary(name) }
 
-fn test_sequencer(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
+// provide the "fx::test_sequencer" public method that is called
+// by this file, by all_bist, and by any mission scripts that
+// want to assure SEQUENCER is not broken before they run.
+
+const name : string = "sequencer"
+
+pub fn test_sequencer(bist: Bist, vessel: Vessel) -> BistResult = {
 
     const seq = Sequencer(vessel)
 
@@ -135,5 +138,17 @@ fn test_sequencer(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
 
     bist.summary(name) }
 
-pub fn sequencer_bist(bist: Bist, vessel: Vessel) -> BistResult = {
-    test_sequencer(bist, "sequencer", vessel) }
+// proivide the "fx::test::sequencer_bist::main_flight" entry point
+// that runs just the SEQUENCER tests.
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.print_line("testing " + name + " ...")
+
+    const bist = Bist()
+    const result = test_sequencer(bist, vessel)
+
+    if (!result.success) {
+        bist.add_fail_head(name, result.error)
+            .add_fail_tail(name)
+        bist.print() }
+    report(result)? }

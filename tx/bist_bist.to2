@@ -1,11 +1,8 @@
-
-// BIST: Built-In Self Test support module
-
 use { CONSOLE } from ksp::console
 use { Vessel } from ksp::vessel
 use { current_time } from ksp::game
 
-use { Bist, BistResult } from fx::bist
+use { Bist, BistResult, report } from fx::bist
 
 // ======== below here is stuff used only for doing BIST of BIST ========
 
@@ -173,7 +170,14 @@ fn test_bist_assert_string(bist: Bist, name: string) -> BistResult = {
 
     bist.summary(name) }
 
-fn test_bist(bist: Bist, name: string) -> BistResult = {
+// provide the "fx::test_bist(bist)" public method that is called
+// by this file, by all_bist, and by any mission scripts that
+// want to assure BIST is not broken before they run.
+
+const name : string = "bist"
+
+pub fn test_bist(bist: Bist) -> BistResult = {
+
 
     // Note: yes, we are testing the test code.
     // some of bist will need to be tested without
@@ -188,5 +192,17 @@ fn test_bist(bist: Bist, name: string) -> BistResult = {
 
     bist.summary(name) }
 
-pub fn bist_test(bist: Bist) -> BistResult = {
-    test_bist(bist, "bist") }
+// proivide the "fx::test::bist_bist::main_flight" entry point
+// that runs just the LOG tests.
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.print_line("testing " + name + " ...")
+
+    const bist = Bist()
+    const result = test_bist(bist)
+
+    if (!result.success) {
+        bist.add_fail_head(name, result.error)
+            .add_fail_tail(name)
+        bist.print() }
+    report(result)? }

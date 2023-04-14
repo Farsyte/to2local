@@ -1,10 +1,10 @@
+use { current_time } from ksp::game
 use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
 
-use { current_time } from ksp::game
-
 use { Log } from fx::log
-use { BistResult } from fx::bist
+
+use { BistResult, report } from fx::bist
 
 // ======== early testing (do this before using BIST) ========
 // test_log_quickly(): quickly test the parts of LOG used by BIST.
@@ -14,7 +14,8 @@ use { BistResult } from fx::bist
 // We are free of course to use the BistResult type definition to
 // allow this test to be used alongside BIST methods.
 
-fn test_log_quickly(name: string) -> BistResult = {
+fn test_log_quickly(pname: string) -> BistResult = {
+    const name = pname + " quick"
     const log : Log = Log()
 
     if (!log.empty()) return Err(name + ": new log is not empty")
@@ -48,9 +49,23 @@ fn test_log_quickly(name: string) -> BistResult = {
 
     name }
 
-pub fn log_test() -> BistResult = {
-    test_log_quickly("log quick")?
-    // If more extensive testing is wanted,
-    // it should be added here. Keep the
-    // quick test quick.
-    "log" }
+// provide the "fx::test_log()" public method that is called
+// by this file, by all_bist, and by any mission scripts that
+// want to assure LOG is not broken before they run.
+
+const name : string = "log"
+
+pub fn test_log() -> BistResult = {
+    test_log_quickly(name)?
+    // ADD HERE: test_log_<more>(name)?
+    name }
+
+// proivide the "fx::log_bist::main_flight" entry point
+// that runs just the LOG tests.
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.print_line("testing " + name + " ...")
+
+    const result = test_log()
+
+    report(result)? }

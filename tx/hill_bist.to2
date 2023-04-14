@@ -119,7 +119,7 @@ fn test_hill_run(bist: Bist, name: string, hill: Hill) -> BistResult = {
     let count = 0
     let copt = hill.curr()
     while (copt.defined) {
-        hill.eval(test_fitness(copt.value))
+        hill.eval(sample_fitness_function(copt.value))
 
         count = count + 1
         copt = hill.curr()
@@ -143,16 +143,22 @@ fn test_hill_run(bist: Bist, name: string, hill: Hill) -> BistResult = {
 
     bist.summary(name) }
 
-sync fn test_fitness(data : float[]) -> float = {
+sync fn sample_fitness_function(data : float[]) -> float = {
     const n = data.length
     const goal = (1...n).map(fn(i) -> i*1.0)
     let sum = 0.0
     for (i in 0..n) sum -= (data[i] - goal[i])^2
     sum }
 
-fn test_hill(bist: Bist, name: string) -> BistResult = {
+// provide the "fx::test_hill(bist)" public method that is called
+// by this file, by all_bist, and by any mission scripts that
+// want to assure HILL is not broken before they run.
+
+const name : string = "hill"
+
+pub fn test_hill(bist: Bist) -> BistResult = {
     const x0 = [ 1.25, 2.50, 3.75]
-    const s0 = test_fitness(x0)
+    const s0 = sample_fitness_function(x0)
     const hill = Hill(x0, s0, 1.0, 1.0e-5, 0.25)
 
     test_hill_init(bist, name + " init", hill)?
@@ -163,31 +169,25 @@ fn test_hill(bist: Bist, name: string) -> BistResult = {
 
     bist.summary(name) }
 
-pub fn hill_bist(bist: Bist) -> BistResult = {
-    test_hill(bist, "hill") }
+// proivide the "fx::hill_bist" entry point
+// that runs just the HILL tests.
 
 use { CONSOLE } from ksp::console
 use { Vessel } from ksp::vessel
 
-pub fn report(result: BistResult) -> BistResult = {
-    if (result.success) {
-        CONSOLE.print_line("PASS: " + result.value) }
-    else {
-        CONSOLE.print_line("FAIL: " + result.error) }
-    result }
+use { report } from fx::bist
 
-pub fn main_flight_disabled_for_now(vessel: Vessel) -> Result<Unit, string> = {
-    CONSOLE.clear()
+// proivide the "fx::test::bist_bist::main_flight" entry point
+// that runs just the LOG tests.
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.print_line("testing " + name + " ...")
 
     const bist = Bist()
-    const name = "hill"
-    const result = test_hill(bist, name)
+    const result = test_hill(bist)
 
     if (!result.success) {
         bist.add_fail_head(name, result.error)
             .add_fail_tail(name)
         bist.print() }
-    //else {
-    //    bist.print() }
-
     report(result)? }

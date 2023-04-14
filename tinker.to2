@@ -4,9 +4,6 @@ use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
 use { current_time } from ksp::game
 
-use { Bist, BistResult } from fx::bist
-use { all_test, report } from fx::all_bist
-
 use { Common } from fx::common
 
 use { Stager } from fx::stager
@@ -90,21 +87,6 @@ impl TinkerMission {
         self }
 }
 
-fn tinker_bist(vessel: Vessel) -> BistResult = {
-    CONSOLE.print_line("")
-    CONSOLE.print_line("Running ALL_BIST before starting ...")
-
-    const bist = Bist()
-    const name = "all_test"
-    const result = all_test(bist, name, vessel)
-
-    if (!result.success) {
-        bist.add_fail_head(name, result.error)
-            .add_fail_tail(name)
-        bist.print() }
-
-    report(result) }
-
 pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
     CONSOLE.clear()
     CONSOLE.print_line("Hello from Vessel: " + vessel.name)
@@ -117,3 +99,24 @@ pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
 
     CONSOLE.print_line("mission plan complete")
 }
+
+// keep BIST realated code segregated at the bottom.
+
+const name : string = "all"
+
+use { Bist, BistResult, report } from fx::bist
+use { all_test } from tx::all_bist
+
+fn tinker_bist(vessel: Vessel) -> BistResult = {
+    CONSOLE.print_line("")
+    CONSOLE.print_line("Running ALL_BIST before starting ...")
+
+    const bist = Bist()
+    const result = all_test(bist, vessel)
+
+    if (!result.success) {
+        bist.add_fail_head(name, result.error)
+            .add_fail_tail(name)
+        bist.print() }
+
+    report(result) }

@@ -1,13 +1,11 @@
-use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
-
+use { Vessel } from ksp::vessel
 use { sleep, current_time } from ksp::game
 
+use { Scheduler, NEVER } from fx::scheduler
 use { Log } from fx::log
 
-use { Bist, BistResult } from fx::bist
-
-use { Scheduler, NEVER } from fx::scheduler
+use { Bist, BistResult, report } from fx::bist
 
 fn test_sch_init(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
     bist.assert_true(name + " sch has initial NEVER task", sch.next.defined)?
@@ -109,7 +107,13 @@ fn test_sch_fizzbuzz(bist: Bist, name: string, sch: Scheduler) -> BistResult = {
 
     bist.summary(name) }
 
-fn test_scheduler(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
+// provide the "fx::test_scheduler" public method that is called
+// by this file, by all_bist, and by any mission scripts that
+// want to assure SCHEDULER is not broken before they run.
+
+const name : string = "scheduler"
+
+pub fn test_scheduler(bist: Bist, vessel: Vessel) -> BistResult = {
 
     // Note: bist.assert_*()? calls (with a trailing ?)
     // indicate that if that case fails, do nothing more
@@ -127,5 +131,17 @@ fn test_scheduler(bist: Bist, name: string, vessel: Vessel) -> BistResult = {
 
     bist.summary(name) }
 
-pub fn scheduler_bist(bist: Bist, vessel: Vessel) -> BistResult = {
-    test_scheduler(bist, "scheduler", vessel) }
+// proivide the "fx::test::scheduler_bist::main_flight" entry point
+// that runs just the SCHEDULER tests.
+
+pub fn main_flight(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.print_line("testing " + name + " ...")
+
+    const bist = Bist()
+    const result = test_scheduler(bist, vessel)
+
+    if (!result.success) {
+        bist.add_fail_head(name, result.error)
+            .add_fail_tail(name)
+        bist.print() }
+    report(result)? }
