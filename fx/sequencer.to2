@@ -44,6 +44,13 @@ const NO_NODE : SchNodeRef = None()
 // ability to append steps, and to consume the next
 // step on the list.
 //
+// The Sequencer owns a Scheduler that it will use
+// to arrange to execute the steps of the plan, properly
+// interleved with the other tasks intended to be run
+// at specific times by the mission. Missions that make
+// use of a Sequencer should not have a separate Scheduler,
+// as the Sequencer provides those services.
+//
 // Applying YAGNIY (You Aint Gonna Need It Yet) here
 // against the feature "rewind to an earlier step" as
 // this simplifies things a bit.
@@ -146,7 +153,7 @@ impl Sequencer {
         max(0.001, abs(r)) }
 
 
-    // Set the throttle to a lazy-computed value.
+    // Set the throttle to a dynamically updated value.
     //
     // Code that uses the Sequencer should route all throttle
     // management through it. It is an implementation detail

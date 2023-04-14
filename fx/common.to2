@@ -1,8 +1,22 @@
+// COMMON: widely shared data and interfaces
+//
+// Yes, the name comes from FORTRAN BLOCK COMMON.
+
 use { CONSOLE } from ksp::console
 use { Vessel } from ksp::vessel
 use { current_time } from ksp::game
 
+use { Task } from fx::scheduler
 use { Sequencer } from fx::sequencer
+
+// The Common object carries much of the data and reference to many of
+// the interface that are used in (nearly) every automated mission.
+//
+// The Common object owns a Sequencer that it will use to arrange to
+// execute the steps of the plan, properly interleved with the other
+// tasks intended to be run at specific times by the mission. Missions
+// that make use of a Common should not have a separate Sequencer or
+// Scheduler, as Common provides the interfaces.
 
 pub struct Common(vessel: Vessel) {
     vessel : Vessel = vessel
@@ -15,42 +29,121 @@ pub struct Common(vessel: Vessel) {
 
 impl Common {
 
-    // proxy the throttle manipulations.
-    sync fn set_throttle_value(self, value: float) -> Common = {
-        self.sequencer.set_throttle_value(value)
-        self }
-    sync fn set_throttle_provider(self, provider: fn(float) -> float) -> Common = {
-        self.sequencer.set_throttle_provider(provider)
-        self }
-
-    // proxy the stage_{pending,request,cancel} API through to sequencer,
-    // so that code using Common does not need to know who is actually
-    // supplying the staging service.
-    sync fn stage_pending(self) -> bool = {
-        self.sequencer.stage_pending() }
-    sync fn stage_request(self) -> Common = {
-        self.sequencer.stage_request()
-        self }
-    sync fn stage_cancel(self) -> Common = {
-        self.sequencer.stage_cancel()
-        self }
-
-    // Provide the "loop" entry point that takes over control of the main
-    // thread to allow execution of async services. Delegate the loop
-    // execution down to the sequencer.
-    fn loop(self) -> Common = {
-        self.sequencer.loop()
-        self }
+    // common.met() computes the current Mission Elapsed Time.
+    //
+    // If the mission has not yet launched, this value will be
+    // negative. It may even be negative infinite.
+    //
+    // The intent is for MET to be zero at the instant we ignite our
+    // engines and/or release the launch clamps, whichever a mission
+    // designates as its "T-0" event. After that, it should increase
+    // with real time (this assumes nobody reaches in and modifies
+    // common.t0 after the launch).
 
     sync fn met(self) -> float = {
         current_time() - self.t0 }
 
-    sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Common = {
+    // common.next_seq(Task) appends a task to the mission plan.
+    //
+    // The Task is a lambda that returns a floating point value, where
+    // postive values are "delay this long and call me again",
+    // negative values are "delay this long then do the next thing",
+    // and zero is "do the next thing, no delay requested"
+    //
+    // This is just a proxy for sequencer.run_at()
+
+    sync fn next_seq(self, task: Task) -> Common = {
+        self.sequencer.next_seq(task)
+        self }
+
+    // common.run_at(eta,name,task): in no less than eta seconds, run task.
+    //
+    // This function should be called by any code -- mission or
+    // infrastructure -- that needs to establish code to run at a
+    // specific time (with the understanding that the code can ask to
+    // be run again and again).
+    //
+    // This is mostly just a proxy for sequencer.run_at()
+
+    sync fn run_at(self, eta: float, name: string, task: Task) -> Common = {
         self.sequencer.run_at(eta, name, task)
         self }
 
-    sync fn next_seq(self, task: fn() -> float) -> Common = {
-        self.sequencer.next_seq(task)
+    // scheduler.loop(): Pass control to the Common code.
+    //
+    // This function enters a loop where it alternately checks for a
+    // scheduled task that is due, and checks for any ASYNC facilities
+    // that need to be triggered. YIELD is used within this loop to
+    // allow time to pass, just in case we manage to get through the
+    // SYNC and ASYNC work without ever doing a yield or a sleep.
+    //
+    // This method returns if there are no real tasks remaining on the
+    // queue (that is, if the next task is scheduled to execute
+    // NEVER).
+    //
+    // This is essentially a proxy for sequencer.loop() with no real
+    // other work happening here.
+
+    fn loop(self) -> Common = {
+        self.sequencer.loop()
+        self }
+
+    // Set the throttle to a constant value.
+    //
+    // Code that uses the Sequencer should route all throttle
+    // management through it. It is an implementation detail that this
+    // is basically a proxy through to the schduler.
+
+    sync fn set_throttle_value(self, value: float) -> Common = {
+        self.sequencer.set_throttle_value(value)
+        self }
+
+    // Set the throttle to a dynamically updated value.
+    //
+    // Code that uses a Common block should route all throttle
+    // management through it. It is an implementation detail that this
+    // is basically a proxy through to the sequencer.
+
+    sync fn set_throttle_provider(self, provider: fn(float) -> float) -> Common = {
+        self.sequencer.set_throttle_provider(provider)
+        self }
+
+    // Request the execution of a staging event.
+    //
+    // This function is how a SYNC function arranges for a staging
+    // event to occur, when staging itself is an ASYNC call to the
+    // vessel management facility.
+    //
+    // Code that uses a Common block should route all staging
+    // management through it. It is an implementation detail that this
+    // is basically a proxy through to the sequencer.
+
+    sync fn stage_request(self) -> Common = {
+        self.sequencer.stage_request()
+        self }
+
+    // Test to see if a task has requested staging.
+    //
+    // This can be done by anyone, but such usage is not common.
+    //
+    // Code that uses a Common block should route all staging
+    // management through it. It is an implementation detail that this
+    // is basically a proxy through to the sequencer.
+
+    sync fn stage_pending(self) -> bool = {
+        self.sequencer.stage_pending() }
+
+    // Cancel the requested staging event.
+    //
+    // This can be used by SYNC tasks to cancel staging, but such
+    // usage is not common.
+    //
+    // Code that uses a Common block should route all staging
+    // management through it. It is an implementation detail that this
+    // is basically a proxy through to the sequencer.
+
+    sync fn stage_cancel(self) -> Common = {
+        self.sequencer.stage_cancel()
         self }
 
 }

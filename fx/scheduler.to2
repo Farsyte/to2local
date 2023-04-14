@@ -355,7 +355,7 @@ impl Scheduler {
         self.t_mgr.throttle = value
         self }
 
-    // Set the throttle to a lazy-computed value.
+    // Set the throttle to a dynamically updated value.
     //
     // All throttle management should be routed through
     // the Scheduler (this allows us to have choices in how
