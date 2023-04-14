@@ -3,20 +3,35 @@ use { CONSOLE } from ksp::console
 
 // Log: a log of text lines that can be reviewed.
 
+// The log is stored as a single-linked list of nodes
+// called LogLine, which contain a reference to the
+// string for this line, and a reference to the next
+// LogLine node (which might be None).
+
+struct LogLine(text: string) {
+    text : string = text
+    next : LogLineRef = no_line
+}
+
+// References are just an Option<> that could
+// be None, or could be a LogLine. This actually
+// stores a pointer, not a copy, of the LogLine.
+
 type LogLineRef = Option<LogLine>
 
 // KontrolSystem2 type inferrance fails on this kind of initialization:
 //     next : Option<LogLine> = None()
-const noLine : LogLineRef = None()
 
-struct LogLine(text: string) {
-    next : LogLineRef = noLine
-    text : string = text
-}
+const no_line : LogLineRef = None()
+
+// This is the log itself. Store a reference to the first
+// line so we can observe the log, and to the last line
+// so we can append to it. Also store the length so we can
+// make decisions based on the size.
 
 pub struct Log {
-    top : Option<LogLine> = noLine
-    end : Option<LogLine> = noLine
+    top : Option<LogLine> = no_line
+    end : Option<LogLine> = no_line
     count : int = 0
 }
 
@@ -25,8 +40,8 @@ impl Log {
         self.count }
 
     sync fn clear(self) -> Log = {
-        self.top = noLine
-        self.end = noLine
+        self.top = no_line
+        self.end = no_line
         self.count = 0
         self }
 
