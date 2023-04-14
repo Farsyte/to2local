@@ -1,0 +1,124 @@
+use { max } from core::math
+use { CONSOLE } from ksp::console
+
+// Hill Climbing to maximize a fitness function.
+
+// THIS IS GOING TO BE A BIT WEIRD.
+//
+// Hill is generally called by code running
+// in sync functions, but the process of evaluating
+// a candidate vector may require stepping the
+// simulation forward, sleeping, and/or calling
+// async methods.
+//
+// So, Hill does not call the fitness function.
+//
+// Instead, the caller will do this:
+// - initialize includes (best_score, best_data)
+// - initialize may include step_size, step_tiny, step_fact
+// - caller asks for the next candidate
+//   which hands back the data in the top of pend
+// - caller tells us the candidate's score
+//   which consumes the top of pend,
+//   and updates (best_score, best_data) if appropriate
+//
+// If the pend stack is empty when we are called,
+// then we populate it with neighbors of best,
+// and reduce the step size by the step fact.
+//
+// If the step size is already minimum, then we return
+// an indication that there are no more candidates.
+//
+// Caller can recover (best_score, best_data) at will.
+
+pub type StateRef = Option<PendingState>
+
+const no_state : StateRef = None()
+
+pub struct Hill(
+        x0 : float[],
+        s0 : float,
+        step_size : float,
+        step_tiny : float,
+        step_fact : float
+    ) {
+    pend : StateRef = no_state
+
+    best_data : float[] = x0
+    best_score : float = s0
+    go_smaller : bool = false
+    step_size : float = step_size
+    step_tiny : float = step_tiny
+    step_fact : float = step_fact
+}
+
+struct PendingState(next : StateRef, data : float[]) {
+    next : StateRef = next
+    data : float[] = data
+}
+
+impl Hill {
+
+    // register this score for the current candidate
+    sync fn eval(self, score: float) -> Hill = {
+        const copt = self.pop()
+        if (copt.defined) {
+            if (self.best_score < score) {
+                const data = copt.value
+                self.go_smaller = false
+                self.best_score = score
+                self.best_data = data } }
+        self }
+
+    // peek at the current assigned vector
+    // generate neighbors on demand
+    // reduce step size if no improvement since
+    // the last time neighbors were generated
+    // return None if step size is already tiny
+    sync fn curr(self) -> Option<float[]> = {
+        if (!self.more()) {
+            if (self.step_size <= self.step_tiny)
+                return None()
+            self.near()
+            if (self.go_smaller)
+                self.step_size *= self.step_fact
+            self.go_smaller = true }
+        self.pend.value.data }
+
+    // generate the neighbors into the pend list
+    sync fn near(self) -> Hill = {
+        const x0 : float[] = self.best_data
+        const n : int = x0.length
+        const ss : float = self.step_size
+        for (i in 0..n) {
+            let x = x0.map(fn(v) -> v)
+            x[i] += ss
+            self.push(x)
+            let y = x0.map(fn(v) -> v)
+            y[i] -= ss
+            self.push(y) }
+        self }
+
+    // return the best score and data so far
+    sync fn best(self) -> (float, float[]) = {
+        ( self.best_score, self.best_data ) }
+
+    // indiate if there is more data on pend
+    sync fn more(self) -> bool = {
+        self.pend.defined }
+
+    // push a data vector onto pend
+    sync fn push(self, data: float[]) -> Hill = {
+        self.pend = PendingState(self.pend, data)
+        self }
+
+    // remove and return the data vector from pend
+    sync fn pop(self) -> Option<float[]> = {
+        if (self.more()) {
+            const popped = self.pend.value
+            self.pend = popped.next
+            Some(popped.data) }
+        else {
+            None() } }
+
+}
