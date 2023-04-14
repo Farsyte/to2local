@@ -1,0 +1,193 @@
+use { Bist, BistResult } from fx::bist
+use { Hill } from fx::hill
+
+fn test_hill_init(bist: Bist, name: string, hill: Hill) -> BistResult = {
+    bist.assert_false(name + " pend is nil", hill.pend.defined)
+    bist.assert_false(name + " more returns false", hill.more())
+    bist.assert_false(name + " pop returns None", hill.pop().defined)
+
+    // the test hill was initialized with [1.25 2.50 3.75]
+    // as the best data, and the score is the negative of the
+    // squared norm of the difference from [1 2 3]
+
+    let (best_score, best_data) = hill.best()
+    bist.assert_float(name + " test init best score",
+        -0.875, -0.875, best_score)
+    bist.assert_float(name + " test init best data[0]",
+        1.25, 1.25, best_data[0])
+    bist.assert_float(name + " test init best data[1]",
+        2.50, 2.50, best_data[1])
+    bist.assert_float(name + " test init best data[2]",
+        3.75, 3.75, best_data[2])
+
+    bist.summary(name) }
+
+fn test_hill_one(bist: Bist, name: string, hill: Hill) -> BistResult = {
+
+    const n : int = 3
+    const x0 : float[] = (1...n).map(fn(i) -> i * 1.25)
+    bist.assert_int(name + " x0 length is right", n, n, x0.length)
+
+    hill.push(x0)
+    bist.assert_true(name + " more returns true", hill.more())?
+
+    const pop_ret = hill.pop()
+    bist.assert_true(name + " pop returns a value", pop_ret.defined)?
+
+    const pop_dat = pop_ret.value
+    bist.assert_int(name + " popped vector is the right length",
+        n, n, pop_dat.length)
+    for (i in 0..n) {
+        bist.assert_float(name + " correct value in x["+i.to_string()+"]",
+            x0[i], x0[i], pop_dat[i]) }
+
+    bist.assert_false(name + " after pop, pend is nil", hill.pend.defined)
+    bist.assert_false(name + " after pop, more returns false", hill.more())
+    bist.assert_false(name + " after pop, pop returns None", hill.pop().defined)
+
+    bist.summary(name) }
+
+fn test_hill_two(bist: Bist, name: string, hill: Hill) -> BistResult = {
+
+    const n : int = 3
+    const x1 : float[] = (1...n).map(fn(i) -> i * 1.25)
+    const x2 : float[] = (1...n).map(fn(i) -> i * 1.75)
+    bist.assert_int(name + " x1 length is right", n, n, x1.length)
+    bist.assert_int(name + " x2 length is right", n, n, x2.length)
+
+    hill.push(x1).push(x2)
+    bist.assert_true(name + " more returns true", hill.more())?
+
+    const x2obs = hill.pop().value
+    const x1obs = hill.pop().value
+
+    bist.assert_false(name + " after pops, more returns false", hill.more())
+    bist.assert_false(name + " after pops, pop returns None", hill.pop().defined)
+
+    bist.assert_int(name + " popped x2 vector is the right length",
+        n, n, x2obs.length)
+    bist.assert_int(name + " popped x1 vector is the right length",
+        n, n, x1obs.length)
+    for (i in 0..n) {
+        bist.assert_float(name + " correct value in x2["+i.to_string()+"]",
+            x2[i], x2[i], x2obs[i])
+        bist.assert_float(name + " correct value in x1["+i.to_string()+"]",
+            x1[i], x1[i], x1obs[i]) }
+
+    bist.assert_false(name + " after pop, pend is nil", hill.pend.defined)
+    bist.assert_false(name + " after pop, more returns false", hill.more())
+    bist.assert_false(name + " after pop, pop returns None", hill.pop().defined)
+
+    bist.summary(name) }
+
+fn test_hill_near(bist: Bist, name: string, hill: Hill) -> BistResult = {
+    bist.assert_false(name + " more returns false", hill.more())?
+
+    hill.near()
+
+    let (best_score, best_data) = hill.best()
+    const n = best_data.length
+    const m = n * 2
+    for (i in 0..m) {
+        bist.assert_true(name + " more sees neighbor " + i.to_string(), hill.more())
+        const pend = hill.pop().value
+        bist.assert_int(name + " len of neighbor " + i.to_string(),
+            n, n, pend.length)
+    }
+    bist.assert_false(name + " right number of neighbors", hill.more())
+
+    bist.summary(name) }
+
+fn find_delta(c: float[], d0: float[]) -> (int, float) = {
+    const n = c.length
+    for (i in 0..n) {
+        const d = c[i] - d0[i]
+        if (d != 0) {
+            return (i, d) } }
+    (0, 0.0) }
+
+fn test_hill_run(bist: Bist, name: string, hill: Hill) -> BistResult = {
+
+    const (s0, d0) = hill.best()
+    const n = d0.length
+    const m = n * 2
+
+    // how to automate that we are actually seeing
+    // M neighbors at each step size, then moving
+    // to a smaller step size?
+
+    let count = 0
+    let copt = hill.curr()
+    while (copt.defined) {
+        hill.eval(test_fitness(copt.value))
+
+        count = count + 1
+        copt = hill.curr()
+    }
+
+    // the test hill is very very well behavied.
+    // we should snap to the precise solution
+    // after 84 evaluations.
+    //
+    // numbers come out exact because all of our
+    // inputs are multiples of 0.25 so we are always
+    // working with FP numbers that have only a few
+    // bits set near the top of the significand.
+
+    bist.assert_int(name + " steps across the test hill", 84, 84, count)
+    const (sF, dF) = hill.best()
+    bist.assert_float(name + " sF", 0.0, 0.0, sF)
+    bist.assert_float(name + " dF[0]", 1.0, 1.0, dF[0])
+    bist.assert_float(name + " dF[1]", 2.0, 2.0, dF[1])
+    bist.assert_float(name + " dF[2]", 3.0, 3.0, dF[2])
+
+    bist.summary(name) }
+
+sync fn test_fitness(data : float[]) -> float = {
+    const n = data.length
+    const goal = (1...n).map(fn(i) -> i*1.0)
+    let sum = 0.0
+    for (i in 0..n) sum -= (data[i] - goal[i])^2
+    sum }
+
+fn test_hill(bist: Bist, name: string) -> BistResult = {
+    const x0 = [ 1.25, 2.50, 3.75]
+    const s0 = test_fitness(x0)
+    const hill = Hill(x0, s0, 1.0, 1.0e-5, 0.25)
+
+    test_hill_init(bist, name + " init", hill)?
+    test_hill_one(bist, name + " one", hill)?
+    test_hill_two(bist, name + " two", hill)?
+    test_hill_near(bist, name + " near", hill)?
+    test_hill_run(bist, name + " curr", hill)?
+
+    bist.summary(name) }
+
+pub fn hill_bist(bist: Bist) -> BistResult = {
+    test_hill(bist, "hill") }
+
+use { CONSOLE } from ksp::console
+use { Vessel } from ksp::vessel
+
+pub fn report(result: BistResult) -> BistResult = {
+    if (result.success) {
+        CONSOLE.print_line("PASS: " + result.value) }
+    else {
+        CONSOLE.print_line("FAIL: " + result.error) }
+    result }
+
+pub fn main_flight_disabled_for_now(vessel: Vessel) -> Result<Unit, string> = {
+    CONSOLE.clear()
+
+    const bist = Bist()
+    const name = "hill"
+    const result = test_hill(bist, name)
+
+    if (!result.success) {
+        bist.add_fail_head(name, result.error)
+            .add_fail_tail(name)
+        bist.print() }
+    //else {
+    //    bist.print() }
+
+    report(result)? }

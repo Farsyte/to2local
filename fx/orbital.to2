@@ -131,7 +131,8 @@ impl Orbital {
 
             CONSOLE.print_line("circularizing at AP")
 
-            self.burn_ut = orbit.next_apoapsis_time(t + 30).value
+            // The "10" is right out of mid air.
+            self.burn_ut = orbit.next_apoapsis_time(t + 30).value - 10
 
             // TODO if we would get to periapsis before apoapsis,
             // then DO IT NOW because our number one use case here

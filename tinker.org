@@ -51,7 +51,7 @@ the standard for methods that run other test methods; it might
 just be a redundant line. I already have a "bist.summary()" which
 generates a useful string but does not log it ...
 
-** 2023-04-13 mid day
+** 2023-04-13 mid-day to late evening
 
 *** transfer and test the SCHEDULER package
 
@@ -136,3 +136,20 @@ to the test vessel, and controlling RCS in the flight plan.
 This was updated as we pulled things together above, but it
 is worth noting that the TINKER plan is now set up to use
 all of the above bits and pieces.
+
+*** add HILL
+
+This is a redesigned hill climber. Because I will want to
+do hillclimbing with fitness functions that do not fit well
+into a SYNC FN (for example, I may need to establish a
+maneuver node and wait for a physical tick), this version
+of HILL makes the caller responsible for providing the
+scores. Hill::curr() provides the next candidate to be
+evaluated, and Hill::eval(s) is how the score is logged.
+
+Hill::curr() returns None if the hill climber has reduced
+its step size below the "step_tiny" configured.
+
+Note that because the caller handles the scores, it can
+always decide to terminate early if it sees a candidate
+with a "good enough" score.
