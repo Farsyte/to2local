@@ -1,4 +1,3 @@
-
 // BIST: Built-In Self Test support module
 
 use { CONSOLE } from ksp::console
@@ -7,7 +6,27 @@ use { current_time } from ksp::game
 
 use { Log } from fx::log
 
+// Methods that proivide Built-In Self Tests need to be able
+// to indicate whether their result was PASS or FAIL, with a
+// string indicating what passed or failed.
+//
+// Applying YAGNI (You Aint Gonna Need It) to the goal
+// of allowing more than just PASS and FAIL results (such
+// as WARN for non-fatal issues or ERROR for precondition
+// errors and failures in the test system).
+
 pub type BistResult = Result<string, string>
+
+// The "Bist" strucure collects test results as they are run,
+// including any additional logged data (such as the expected
+// and observed values) that the test deems might be useful
+// to the engineer puzzling over how to fix a problem.
+//
+// Right now, this is
+// - the number of test cases that reported FAIL
+// - the total number of test cases (PASS or FAIL)
+// - the total number of lines BIST has added to the log
+// - the actual log
 
 pub struct Bist() {
     fail_count : int = 0
@@ -15,6 +34,11 @@ pub struct Bist() {
     log_lines : int = 0
     log : Log = Log()
 }
+
+// In a few places, it is useful to be able to simply print
+// a result to the console directly. This is usually done
+// at the end of a test to produce a single line indicating
+// whether all cases passed, or some case failed.
 
 pub fn report(result: BistResult) -> BistResult = {
     if (result.success) {
@@ -25,6 +49,13 @@ pub fn report(result: BistResult) -> BistResult = {
 
 impl Bist {
 
+    // bist.assert_true("test case name and description", observed_value)
+    // logs the test as PASS if the observed value is true,
+    // or logs it as FAIL if the value is not true.
+    // The test case description should be chosen carefully to make
+    // both the PASS and FAIL messages clear.
+    // No additional information is wanted in the log.
+
     sync fn assert_true(self, name : string, observed : bool) -> BistResult = {
         if (observed != true) {
             self.add_fail_head(name, "condition is not TRUE")
@@ -32,6 +63,13 @@ impl Bist {
 
         else {
             self.pass(name) } }
+
+    // bist.assert_false("test case name and description", observed_value)
+    // logs the test as PASS if the observed value is false,
+    // or logs it as FAIL if the value is not false.
+    // The test case description should be chosen carefully to make
+    // both the PASS and FAIL messages clear.
+    // No additional information is wanted in the log.
 
     sync fn assert_false(self, name : string, observed : bool) -> BistResult = {
         if (observed != false) {
@@ -41,11 +79,25 @@ impl Bist {
         else {
             self.pass(name) } }
 
+    // bist.assert_float("test case name and description", lo, hi, observed)
+    // verifies that the observed value is within an inclusive range.
+    // -- An observed NaN is logged as a failure. Both bounds of the range
+    //    are appended to the log, as well as the string conversion of
+    //    the observed value (which is probably just NaN).
+    // -- Observed value less than the low bound is logged as a failure,
+    //    with the low bound, the observed value, and their difference
+    //    appended to the log file.
+    // -- Observed value greater than the high bound is logged as a failure,
+    //    with the high bound, the observed value, and their difference
+    //    appended to the log file.
+    // -- Otherwise, the value is within the inclusive range, log as PASS
+    //    with no supporting data wanted in the log file.
+
     sync fn assert_float(self, name: string, lo: float, hi: float, observed: float) -> BistResult = {
         if (observed != observed) {
             self.add_fail_head(name, "value is NaN")
                 .add("lo bound: " + lo.to_string())
-                .add("hi bound: " + lo.to_string())
+                .add("hi bound: " + hi.to_string())
                 .add("observed: " + observed.to_string())
                 .add_fail_tail(name) }
 
@@ -58,13 +110,24 @@ impl Bist {
 
         else if (observed > hi) {
             self.add_fail_head(name, "value is above allowed range")
-                .add("hi bound: " + lo.to_string())
+                .add("hi bound: " + hi.to_string())
                 .add("observed: " + observed.to_string())
                 .add("difference: " + (observed - hi).to_string())
                 .add_fail_tail(name) }
 
         else {
             self.pass(name) } }
+
+    // bist.assert_int("test case name and description", lo, hi, observed)
+    // verifies that the observed value is within an inclusive range.
+    // -- Observed value less than the low bound is logged as a failure,
+    //    with the low bound, the observed value, and their difference
+    //    appended to the log file.
+    // -- Observed value greater than the high bound is logged as a failure,
+    //    with the high bound, the observed value, and their difference
+    //    appended to the log file.
+    // -- Otherwise, the value is within the inclusive range, log as PASS
+    //    with no supporting data wanted in the log file.
 
     sync fn assert_int(self, name: string, lo: int, hi: int, observed: int) -> BistResult = {
         if (observed < lo) {
@@ -84,6 +147,13 @@ impl Bist {
         else {
             self.pass(name) } }
 
+    // bist.assert_string("test case name and description", expected, observed)
+    // verifies that the observed value compares equal to the expected value.
+    // -- If the strings compare equal,  log as PASS with no supporting data
+    //    wanted in the log file.
+    // -- Otherwise, log as FAIL, including the observed and expected strings
+    //    in the log file for visual comparison during debugging.
+
     sync fn assert_string(self, name: string, expected: string, observed: string) -> BistResult = {
         if (observed == expected) {
             self.pass(name) }
@@ -94,6 +164,9 @@ impl Bist {
                 .add("expected: " + expected)
                 .add_fail_tail(name) } }
 
+    // bist.clear() erases any accumulated test results.
+    // returns SELF to allow simple operation chaining.
+
     sync fn clear(self) -> Bist = {
         self.test_count = 0
         self.fail_count = 0
@@ -101,21 +174,45 @@ impl Bist {
         self.log.clear()
         self }
 
+    // bist.empty() is true if there is no data in the log.
+    // essentially a proxy to the Log package.
+
     sync fn empty(self) -> bool = {
         self.log.empty() }
 
+    // bist.pop() consumes and returns the first string from the log.
+    // essentially a proxy to the Log package, plus updating the
+    // local bookkeeping.
+
     sync fn pop(self) -> Option<string> = {
-        self.log_lines -= 1
-        self.log.pop() }
+        const result = self.log.pop()
+        if (result.defined) self.log_lines -= 1
+        result }
+
+    // bist.add appends a string to the log file.
+    // essentially a proxy to the Log package, plus updating the
+    // local bookkeeping.
+    // returns SELF to allow simple operation chaining.
 
     sync fn add(self, text: string) -> Bist = {
         self.log_lines += 1
         self.log.add(text)
         self }
 
+    // bist.print dumps the log to the console, printing each
+    // string on its own line.
+    // essentially a proxy to the Log package.
+    // returns SELF to allow simple operation chaining.
+
     fn print(self) -> Bist = {
         self.log.print()
         self }
+
+    // bist.summary(name) constructs a one-line summary of the
+    // test results accumuated, listing the number of FAIL cases
+    // logged and the total number of BIST cases logged, packing
+    // it into a BistResult that indicates failure if there were
+    // any FAIL cases.
 
     sync fn summary(self, name : string) -> BistResult = {
         const nc : string = name + ", have completed "
