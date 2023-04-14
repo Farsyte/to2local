@@ -1,55 +1,71 @@
+// SEQUENCER: manage the main sequential mission plan
+
 use { max, min, abs } from core::math
 
 use { Vessel } from ksp::vessel
 use { CONSOLE } from ksp::console
 
-use { Scheduler } from fx::scheduler
+use { Scheduler, Task } from fx::scheduler
+
+// The unit of work in this sytem is a Task,
+// which is a function taking no parameters
+// that returns a float. This data type is
+// shared with the Scheduler.
+
+// SchNode carries the bookkeeping for a step that
+// is on the Main Mission Sequence List. It includes
+// the task and a link to the next node; the link
+// is the value NO_NODE for the last node on the list.
+
+struct SchNode(task: Task) {
+    next: SchNodeRef = NO_NODE
+    task: Task = task
+}
+
+// References to SchNode, that might be NO_NODE, use the
+// SchNodeRef data type. Provide a type name for
+// this alias to keep usage of it a bit cleaner, and
+// to encapsulate the decision to use Option in just
+// this one place.
+
+pub type SchNodeRef = Option<SchNode>
+
+// Provide a constant representing "No Step"
+// Note that as of KontrolSystem2 0.3.3, it is not
+// possible to use None() in an initializer:
+//     next: SchNodeRef = None()
+// this is a good second reason to provide NO_NODE.
+
+const NO_NODE : SchNodeRef = None()
+
+// The sequencer itself carries all of the bookkeeping
+// to maintain a linear list representing the main
+// sequence of steps for this mission, including the
+// ability to append steps, and to consume the next
+// step on the list.
+//
+// Applying YAGNIY (You Aint Gonna Need It Yet) here
+// against the feature "rewind to an earlier step" as
+// this simplifies things a bit.
 
 pub struct Sequencer(vessel: Vessel) {
     scheduler: Scheduler = Scheduler(vessel)
 
-    next: Option<Node> = no_node
-    last: Option<Node> = no_node
-    step: int = 0
+    next: SchNodeRef = NO_NODE
+    last: SchNodeRef = NO_NODE
 }
-
-struct Node(task: fn() -> float) {
-    next: Option<Node> = no_node
-    task: fn() -> float = task
-}
-
-// KontrolSystem2 type inferrance fails on this kind of initialization:
-//    next: Option<Node> = None()
-
-const no_node : Option<Node> = None()
 
 impl Sequencer {
 
-    // proxy the throttle manipulations.
-    sync fn set_throttle_provider(self, provider: fn(float) -> float) -> Sequencer = {
-        self.scheduler.set_throttle_provider(provider)
-        self }
-    sync fn set_throttle_value(self, value: float) -> Sequencer = {
-        self.scheduler.set_throttle_value(value)
-        self }
+    // sequencer.next_seq(Task) appends a task to the mission plan.
+    // The Task is a lambda that returns a floating point value,
+    // where postive values are "delay this long and call me again",
+    // negative values are "delay this long then do the next thing",
+    // and zero is "do the next thing, no delay requested"
 
-    // proxy stage_{pending,request_cancel} down to scheduler.
-    sync fn stage_pending(self) -> bool = {
-        self.scheduler.stage_pending() }
-    sync fn stage_request(self) -> Sequencer = {
-        self.scheduler.stage_request()
-        self }
-    sync fn stage_cancel(self) -> Sequencer = {
-        self.scheduler.stage_cancel()
-        self }
-
-    sync fn run_at(self, eta: float, name: string, task: fn() -> float) -> Sequencer = {
-        self.scheduler.run_at(eta, name, task)
-        self }
-
-    sync fn next_seq(self, task: fn() -> float) -> Sequencer = {
-        const nref : Option<Node> = Some(Node(task))
-        const last : Option<Node> = self.last
+    sync fn next_seq(self, task: Task) -> Sequencer = {
+        const nref : SchNodeRef = Some(SchNode(task))
+        const last : SchNodeRef = self.last
         if (!self.next.defined)
             self.next = nref
         if (self.last.defined)
@@ -57,22 +73,54 @@ impl Sequencer {
         self.last = nref
         self }
 
+    // sequencer.run_at(eta,name,task): in no less than eta seconds, run task.
+    // This function should be called by any code -- mission or
+    // infrastructure -- that needs to establish code to run at
+    // a specific time (with the understanding that the code can
+    // ask to be run again and again).
+    //
+    // This is mostly just a proxy for scheduler.run_at()
+
+    sync fn run_at(self, eta: float, name: string, task: Task) -> Sequencer = {
+        self.scheduler.run_at(eta, name, task)
+        self }
+
     // Provide the "loop" entry point that takes over control of the main
     // thread to allow execution of async services. Delegate the loop
     // execution down to the scheduler, after establishing the scheduled
     // task that will step through the main sequence.
+
+    // scheduler.loop(): Pass control to the Scheduler.
+    //
+    // This function enters a loop where it alternately checks
+    // for a scheduled task that is due, and checks for any
+    // ASYNC facilities that need to be triggered. YIELD is used
+    // within this loop to allow time to pass, just in case we
+    // manage to get through the SYNC and ASYNC work without
+    // ever doing a yield or a sleep.
+    //
+    // This method returns if there are no real tasks remaining
+    // on the queue (that is, if the next task is scheduled to
+    // execute NEVER).
+    //
+    // This is essentially a proxy for scheduler.loop() with some
+    // set-up logic inserted to initiate execution of the main
+    // sequencer via the sequencer.step() task.
 
     fn loop(self) -> Sequencer = {
         self.run_at(0.1, "seq", fn () -> self.step())
         self.scheduler.loop()
         self }
 
-    // service function to execute a main sequence step.
-    // curently the main sequence is a singlely-linked list
-    // where we discard leading entries as they indicate that
-    // their task is complete.
+    // sequencer.step() is a Task, which executes the next
+    // step on the Mission Main Sequence list.
     //
-    // sequencer tasks return a floating point value. If this
+    // Curently the main sequence is a singlely-linked list
+    // where we discard leading entries as they indicate that
+    // their task is complete. The number of places in the code
+    // that know and depend on this should be minimized.
+    //
+    // Sequencer tasks return a floating point value. If this
     // value is positive, the same task will repeat; if it is
     // not, we move to the next task. The absolute value is how
     // long to delay.
@@ -96,4 +144,63 @@ impl Sequencer {
             self.next = n.next
 
         max(0.001, abs(r)) }
+
+
+    // Set the throttle to a lazy-computed value.
+    //
+    // Code that uses the Sequencer should route all throttle
+    // management through it. It is an implementation detail
+    // that this is basically a proxy through to the schduler.
+
+    sync fn set_throttle_provider(self, provider: fn(float) -> float) -> Sequencer = {
+        self.scheduler.set_throttle_provider(provider)
+        self }
+
+    // Set the throttle to a constant value.
+    //
+    // Code that uses the Sequencer should route all throttle
+    // management through it. It is an implementation detail
+    // that this is basically a proxy through to the schduler.
+
+    sync fn set_throttle_value(self, value: float) -> Sequencer = {
+        self.scheduler.set_throttle_value(value)
+        self }
+
+    // Request the execution of a staging event.
+    //
+    // This function is how a SYNC function arranges for a
+    // staging event to occur, when staging itself is an ASYNC
+    // call to the vessel management facility.
+    //
+    // Code that uses the Sequencer should route all staging
+    // management through it. It is an implementation detail
+    // that this is basically a proxy through to the schduler.
+
+    sync fn stage_request(self) -> Sequencer = {
+        self.scheduler.stage_request()
+        self }
+
+    // Test to see if a task has requested staging.
+    //
+    // This can be done by anyone, but such usage is not common.
+    //
+    // Code that uses the Sequencer should route all staging
+    // management through it. It is an implementation detail
+    // that this is basically a proxy through to the schduler.
+
+    sync fn stage_pending(self) -> bool = {
+        self.scheduler.stage_pending() }
+
+    // Cancel the requested staging event.
+    //
+    // This can be used by SYNC tasks to cancel staging, but
+    // such usage is not common.
+    //
+    // Code that uses the Sequencer should route all staging
+    // management through it. It is an implementation detail
+    // that this is basically a proxy through to the schduler.
+
+    sync fn stage_cancel(self) -> Sequencer = {
+        self.scheduler.stage_cancel()
+        self }
 }
