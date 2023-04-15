@@ -1,8 +1,15 @@
+// ASCENT: provide ascent phase support for the mission plan.
+
 use { CONSOLE } from ksp::console
 use { AutopilotMode } from ksp::vessel
 use { min, max, sqrt } from core::math
 
 use { Common } from fx::common
+
+// The Ascent object carries data that will be used by the
+// various mission steps within the ascent phase. Things like
+// when we started, and the altitude range to be used when
+// computing our desired gravity turn shape.
 
 pub struct Ascent(common: Common) {
     common : Common = common
@@ -38,6 +45,7 @@ impl Ascent {
         // detect completion. This is not a precision rise of our apoapsis,
         // we just cut the throttle when our projected apoapsis is higher than
         // the requested initial apoapsis altitude.
+
         if (obs_ap > des_ap) {
             common.set_throttle_value(0.0)
             vessel.autopilot.enabled = true
@@ -61,6 +69,13 @@ impl Ascent {
             vessel.autopilot.enabled = true
             vessel.autopilot.mode = AutopilotMode.Autopilot }
 
+        // SIMPLE CONTROL: vary the pitch from 90 degrees (up) to 0 (horizontal)
+        // linearly with the SQUARE ROOT of what fraction of the altitude band
+        // from alt_min to alt_max we have passed. This is not a "perfect" gravity
+        // turn where our facing angle is always surface-prograde, but is quite
+        // close and ends up being acceptably efficient across a braod range of
+        // orbital vessels.
+
         const atm_frac = (vessel.altitude_sealevel - self.alt_min) / (self.alt_max - self.alt_min)
         const atm_clip = max(0, min(1, atm_frac))
         const atm_sqrt = sqrt(atm_clip)
@@ -83,6 +98,10 @@ impl Ascent {
         0.1 }
 
     // ascent.spacecoast: unpowered ascent from mid-atmosphere to space
+    //
+    // spacecoast just hangs out, pointing our nose into the wind, until
+    // we are outside the atmosphere.
+
     sync fn spacecoast(self) -> float = {
         const common = self.common
         const vessel = common.vessel
