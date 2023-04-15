@@ -1,3 +1,5 @@
+// LAUNCH: provide Launch-oriented main sequence steps
+
 use { ceiling } from core::math
 
 use { CONSOLE } from ksp::console
@@ -5,6 +7,11 @@ use { current_time } from ksp::game
 use { AutopilotMode } from ksp::vessel
 
 use { Common } from fx::common
+
+// The Launch object carries shared data that are needed by
+// the main sequence mission plan steps for launch. This
+// includes when to launch, and data supporting working out
+// when to move on past the Launch steps.
 
 pub struct Launch(common: Common) {
     common : Common = common
@@ -24,81 +31,14 @@ pub struct Launch(common: Common) {
 
 impl Launch {
 
-    // launch.launchtime: select an appropriate time to launch.
-    sync fn launchtime(self) -> float = {
-        const common = self.common
-
-        // Open for expansion:
-        //
-        // When initating support for missions that constrain the
-        // launch window (such as waiting until we are within the
-        // orbital plane of a destination), add code here to examine
-        // data in common to guide selection of launch time.
-        //
-        // Absent any constraints, launch in 3 seconds.
-
-        common.t0 = current_time() + 10.0
-
-        0.0 }
-
-    // launch.countdown: print the countdown, end at common.t0
-    sync fn countdown(self) -> float = {
-        const common = self.common
-
-        const t = current_time()
-
-        if (self.mode != 1) {
-            self.mode = 1
-            self.mode_ut = t }
-
-        const dt = common.t0 - current_time()
-        const countdown = ceiling(dt).to_int
-        if (self.countdown != countdown) {
-            self.countdown = countdown
-            if (0 < countdown && countdown < 11)
-                CONSOLE.print_line("countdown: T-" + countdown.to_string()) }
-
-        if (dt > 0) {
-            0.1 }
-
-        else {
-            0.0 } }
-
-    // launch.liftoff: handle instant of launch through clearing the tower.
-    // updates t0 to reflect the actual instant that we first run this function.
-    // uses SAS in Stability Assist mode to avoid sudden attitude changes.
-    // forces maximum throttle until we are clear of the tower.
-    // calibrates the launch altitude, computes how high we need to be to clear
-    // the tower, and waits until we are past that altitude.
-    // NOTE: the autostager will determine when we need to stage, and the actual
-    // async call to the KSP stager happens in the scheduler.
-    sync fn liftoff(self) -> float = {
-        const common = self.common
-        const vessel = common.vessel
-
-        const t = current_time()
-
-        if (self.mode != 2) {
-            self.mode = 2
-            self.mode_ut = t
-
-            CONSOLE.print_line("launching")
-
-            self.liftoff_done_alt = vessel.altitude_sealevel + self.launch_height
-            common.t0 = t       // this is the REAL T-0 universal time.
-            common.set_throttle_value(1.0)
-            vessel.autopilot.enabled = true
-            vessel.autopilot.mode = AutopilotMode.StabilityAssist }
-
-        if (vessel.altitude_sealevel < self.liftoff_done_alt) {
-            0.1 }
-
-        else {
-            0.0 } }
-
     // launch.manual: await a manual launch.
+    //
+    // use .manual (not .launchtime and .countdown) when you want
+    // to leave the launch time up to the flight engineer.
+    //
     // on first call, calibrate how much thrust we need to launch.
     // wait until available thrust is sufficient to lift.
+
     sync fn manual(self) -> float = {
         const common = self.common
         const vessel = common.vessel
@@ -125,6 +65,109 @@ impl Launch {
             CONSOLE.print_line("awaiting launch") }
 
         if (vessel.available_thrust <= self.launch_thrust) {
+            0.1 }
+
+        else {
+            0.0 } }
+
+    // launch.launchtime: select an appropriate time to launch.
+    //
+    // Currently this just arbitrarily picks a T0.
+    //
+    // Use .launchtime() and .countdown() for automated launches.
+    //
+    // This is where we would examine launch criteria in Common
+    // and place ourselves in a "PAD HOLD" until the right time,
+    // for example when we are near a target orbital plane.
+    //
+    // Note that for interplanetary launch windows, we will be
+    // holding in a parking orbit.
+
+    sync fn launchtime(self) -> float = {
+        const common = self.common
+
+        // Open for expansion:
+        //
+        // When initating support for missions that constrain the
+        // launch window (such as waiting until we are within the
+        // orbital plane of a destination), add code here to examine
+        // data in common to guide selection of launch time.
+        //
+        // Absent any constraints, launch in 3 seconds.
+
+        common.t0 = current_time() + 10.0
+
+        0.0 }
+
+    // launch.countdown: print the countdown, end at common.t0
+    //
+    // Being able to synchronize with the KSP-2 stock countdown
+    // would be really nifty!
+    //
+    // For now, this just prints T-10 through T-1 to the console
+    // then terminates at T-0 ready for ignition.
+
+    sync fn countdown(self) -> float = {
+        const common = self.common
+
+        const t = current_time()
+
+        if (self.mode != 1) {
+            self.mode = 1
+            self.mode_ut = t }
+
+        const dt = common.t0 - current_time()
+        const countdown = ceiling(dt).to_int
+        if (self.countdown != countdown) {
+            self.countdown = countdown
+            if (0 < countdown && countdown < 11)
+                CONSOLE.print_line("countdown: T-" + countdown.to_string()) }
+
+        if (dt > 0) {
+            0.1 }
+
+        else {
+            0.0 } }
+
+    // launch.liftoff: handle instant of launch through clearing the tower.
+    //
+    // updates t0 to reflect the actual instant that we first run this function.
+    //
+    // uses SAS in Stability Assist mode to avoid sudden attitude changes.
+    //
+    // forces maximum throttle until we are clear of the tower.
+    //
+    // calibrates the launch altitude, computes how high we need to be to clear
+    // the tower, and waits until we are past that altitude.
+    //
+    // NOTE: the autostager will determine when we need to stage, and the actual
+    // async call to the KSP stager happens in the scheduler.
+
+    sync fn liftoff(self) -> float = {
+        const common = self.common
+        const vessel = common.vessel
+
+        const t = current_time()
+
+        if (self.mode != 2) {
+            self.mode = 2
+            self.mode_ut = t
+
+            CONSOLE.print_line("launching")
+
+            // calibrate our launch radar altimeter by sampling
+            // the altitude as we launch, and setting our DONE
+            // altitude appropriately.
+
+            self.liftoff_done_alt = vessel.altitude_sealevel + self.launch_height
+            common.t0 = t       // this is the REAL T-0 universal time.
+
+            // Set full throttle and use SAS to minimize attitude changes.
+            common.set_throttle_value(1.0)
+            vessel.autopilot.enabled = true
+            vessel.autopilot.mode = AutopilotMode.StabilityAssist }
+
+        if (vessel.altitude_sealevel < self.liftoff_done_alt) {
             0.1 }
 
         else {
