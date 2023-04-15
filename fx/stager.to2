@@ -1,10 +1,23 @@
+// STAGER: provide decision logic for automatic staging
+
 use { round } from core::math
 use { CONSOLE } from ksp::console
 use { Common } from fx::common
 
+// The Stager object carries state that is needed for the staging
+// related tasks to execute. Currently, this is simply a reference to
+// the Common block for the mission, which gives access to the vessel
+// for status, and to the staging request related APIs in the common
+// block.
+
 pub struct Stager(common: Common) {
     common : Common = common
 }
+
+// The INTERNAL any_flameout service function examines the parts
+// associated with the current stage, looking for any engines that
+// have the "is_flameout" status, returning TRUE if any engines in the
+// current stage have flamed out due to having no access to fuel.
 
 sync fn any_flameout(stager: Stager) -> bool = {
     const common = stager.common
@@ -19,10 +32,27 @@ sync fn any_flameout(stager: Stager) -> bool = {
                 return true } } }
     false }
 
+// The INTERNAL stage_needed service function is responsible for
+// examining the current state of the vessel and the mission, and
+// deciding when it is time to stage.
+
 sync fn stage_needed(stager: Stager) -> bool = {
     const common = stager.common
     const vessel = common.vessel
     const staging = vessel.staging
+
+    // Current logic:
+    // - Do not stage if the stage number is already zero.
+    // - Do not stage if MET is zero or negative.
+    // - Subject to the above:
+    //   - stage if the available thrust is zero
+    //   - stage if any engine is flamed out
+    //
+    // When I set this up, I was unable to notice the
+    // available thrust going down when engines flamed
+    // out, which is a bit unfortunate; watching for
+    // a decrese in maxthrust was a nice way to
+    // decide "nobody has flamed out" efficently.
 
     (1 < staging.current) &&
     (0.0 <= common.met()) &&
@@ -30,6 +60,26 @@ sync fn stage_needed(stager: Stager) -> bool = {
         any_flameout(stager)) }
 
 impl Stager {
+
+    // stager.stage_check() is a Task that decides when to stage.
+    //
+    // If a stage is pending, come back soon, because we may
+    // need to immediately stage a second time, in the case where
+    // a stage has just the separator and the engine is in the next
+    // stage. We want to get that next engine ignited promptly.
+    //
+    // Test to see if we need to stage. If so, put in the request
+    // for staging, and come back soon, for similar reasons as
+    // above; we want to come back and keep checking to see if
+    // we need a followup stage.
+    //
+    // Otherwise, the world is boring, come back in a while,
+    // this does not need to be fast but it does determine the
+    // delay between flameout and staging.
+    //
+    // For the moment, I have all these set to 0.1 seconds, and
+    // if I do not find a reason to make them independent, this
+    // code may get refactord for simplicity.
 
     sync fn stage_check(self) -> float = {
         if (self.common.stage_pending()) {
