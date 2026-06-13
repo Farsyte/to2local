@@ -1,5 +1,11 @@
 # to2local
 
+## ARCHIVED
+
+This repository is archived.
+
+## Original README
+
 This is an image of the directory where I keep my scripts
 for the KontrolSystem2 addon for Kerbal Space Program 2.
 
